@@ -24,6 +24,8 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
+bool basicRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir);
+void renderRay(glm::vec3 rayOrigin, glm::vec3 rayDir, glm::mat4 view, glm::mat4 model, glm::mat4 projection, Shader& shader);
 
 //Global variables
 int windowWidth = 800, windowHeight = 600;
@@ -90,8 +92,9 @@ int main()
 	Shader lightShader("../OpenGL_DeformProj/lightVert.vert", "../OpenGL_DeformProj/lightFrag.frag");
 	Shader singleColorShader("../OpenGL_DeformProj/singleColor.vert", "../OpenGL_DeformProj/singleColor.frag");
 	Shader textShader("../OpenGL_DeformProj/textShader.vert", "../OpenGL_DeformProj/textShader.frag");
-	Shader grassShader("../OpenGL_DeformProj/grass.vert", "../OpenGL_DeformProj/grass.frag");
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
+
+	Shader rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag");
 
 	float vertices[] = {
 		// Back face
@@ -313,10 +316,17 @@ int main()
 		objShader.setMat4("model", model);
 		target.Draw(objShader);
 
+		model = glm::mat4(1.0f);
+		renderRay(glm::vec3(-1.0f, -1.0f, 0.0f), glm::normalize(glm::vec3(2.0f, 1.0f, 3.0f)), view, model, projection, rayShader);
+		bool rayResult = basicRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(-1.0f, -1.0f, 0.0f), glm::normalize(glm::vec3(2.0f, 1.0f, 3.0f)));
+
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
 		text.renderText(textShader, "FPS:" + std::to_string((int)(1 / deltaTime)), 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
-
+		//if (rayResult == glm::vec3(0, 0, 0))
+		//{
+		//	text.renderText(textShader, "no hit haha yes", 0.0f, windowHeight - 96.0f, 1.0f, textCanvas);
+		//}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -379,6 +389,60 @@ void processInput(GLFWwindow * window)
 			quadratic = 1.8;
 	}
 
+}
+
+void renderRay(glm::vec3 rayOrigin, glm::vec3 rayDir, glm::mat4 view, glm::mat4 model, glm::mat4 projection, Shader& shader)
+{
+	//Render the ray (debug purposes)
+	glm::vec3 vertices[] = { rayOrigin, rayOrigin + rayDir * 10000.0f };
+	unsigned int VAO, VBO;
+	glGenBuffers(1, &VBO);
+	glGenVertexArrays(1, &VAO);
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); //position vertex attribute
+	glEnableVertexAttribArray(0);
+
+	shader.use();
+	shader.setMat4("model", model);
+	shader.setMat4("view", view);
+	shader.setMat4("projection", projection);
+	glDrawArrays(GL_LINES, 0, 2);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+bool basicRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir)
+{
+	//Do actual math lmao
+	glm::vec3 normal = glm::cross((v1 - v0), (v2 - v0));
+
+	float planeDistance = glm::dot(normal, v0);
+	float parallelChecker = glm::dot(normal, rayDir);
+	if (parallelChecker == 0)
+		return false;
+	float hitDistance = -(glm::dot(normal, rayOrigin) + planeDistance) / parallelChecker;
+	if (hitDistance < 0)
+		return false;
+	glm::vec3 rayHit = rayOrigin + hitDistance * rayDir;
+
+	glm::vec3 edge0 = v1 - v0;
+	glm::vec3 edge1 = v2 - v1;
+	glm::vec3 edge2 = v0 - v2;
+	glm::vec3 C0 = rayHit - v0;
+	glm::vec3 C1 = rayHit - v1;
+	glm::vec3 C2 = rayHit - v2;
+	if (glm::dot(edge0, C0) < 0)
+		return false;
+	if (glm::dot(edge1, C1) < 0)
+		return false;
+	if (glm::dot(edge2, C2) < 0)
+		return false;
+
+	return true;
 }
 
 void mouse_callback(GLFWwindow * window, double xpos, double ypos)
