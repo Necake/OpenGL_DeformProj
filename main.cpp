@@ -181,40 +181,11 @@ int main()
 		-1.0f, -1.0f,  1.0f,
 		 1.0f, -1.0f,  1.0f
 	};
-	float transparentVertices[] = {
-		// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-		0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-		1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-	};
-	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f,  0.0f,  0.0f),
-		glm::vec3(2.0f,  5.0f, -15.0f),
-		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
-		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f,  3.0f, -7.5f),
-		glm::vec3(1.3f, -2.0f, -2.5f),
-		glm::vec3(1.5f,  2.0f, -2.5f),
-		glm::vec3(1.5f,  0.2f, -1.5f),
-		glm::vec3(-1.3f,  1.0f, -1.5f)
-	};
 	glm::vec3 lightPositions[] = {
 		glm::vec3(3.0f,  1.0f,  10.0f),
 		glm::vec3(11.0f, -15.0f, -20.0f),
 		glm::vec3(-20.0f,  10.0f, -60.0f),
 		glm::vec3(0.0f,  0.0f, -15.0f)
-	};
-	glm::vec3 vegetationPositions[] = {
-		glm::vec3(-1.5f,  0.5f, -0.48f),
-		glm::vec3(1.5f,  0.5f,  0.51f),
-		glm::vec3(0.0f,  0.5f,  0.7f),
-		glm::vec3(-0.3f,  0.5f, -2.3f),
-		glm::vec3(0.5f,  0.5f, -0.6f)
 	};
 
 	//Light (cube) geometry setup
@@ -230,22 +201,6 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-
-	unsigned int grassVAO, grassVBO;
-	glGenBuffers(1, &grassVBO);
-	glGenVertexArrays(1, &grassVAO);
-
-	glBindVertexArray(grassVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, grassVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
-	//position and texcoords
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	unsigned int grassTex;
-	loadTexture(&grassTex, true, "../../OpenGLAssets/grass.png");
 
 	//Skybox setup
 	std::vector<std::string> skyBoxFaces = {
@@ -280,43 +235,10 @@ int main()
 	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
 	objShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 
-	Model nanoSuit("../../OpenGLAssets/testBottle/kola.obj");
-	objShader.setVec3("material.diffuse", nanoSuit.material.diffuse);
-	objShader.setVec3("material.specular", nanoSuit.material.specular);
+	Model target("../../OpenGLAssets/testBottle/testBottle.obj");
+	objShader.setVec3("material.diffuse", target.material.diffuse);
+	objShader.setVec3("material.specular", target.material.specular);
 
-
-	/*
-	//-------------------------------------------------------------------------------------------------------
-	//Assigning a custom framebuffer, because fuck you, why not
-	//-------------------------------------------------------------------------------------------------------
-	unsigned int fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-	unsigned int fbTex;
-	glGenTextures(1, &fbTex);
-	glBindTexture(GL_TEXTURE_2D, fbTex);
-	//no data, will be filled by the buffer
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowHeight, windowWidth, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbTex, 0);
-
-	unsigned int rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cout << "ERROR: Incomplete frambuffer." << std::endl;
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); //reverts back to the default buffer
-	*/
 	//------------------------------------------------------------------------------------------------
 	//Main loop
 	//------------------------------------------------------------------------------------------------
@@ -380,42 +302,16 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
-		//Rendering object geometry
-		for (int i = 0; i < 10; i++)
-		{
-			glStencilFunc(GL_ALWAYS, 1, 0xFF);
-			glStencilMask(0xFF);
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, cubePositions[i]);
-			model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
-			model = glm::rotate(model, (float)glm::radians(glfwGetTime() * 10 * i), glm::vec3(1.0f, 0.3f, 0.5f));
-			objShader.use();
-			objShader.setMat4("model", model);
-			nanoSuit.Draw(objShader);
-		}
-
-		//Rendering the grassy bois
-		//Sorting them first by distance from camera
-		glDisable(GL_CULL_FACE); //disabling culling since we want the grass to be 2 sided
-		std::map<float, glm::vec3> sorted;
-		for (unsigned int i = 0; i < 5; i++)
-		{
-			float distance = glm::length(camera.Position - vegetationPositions[i]);
-			sorted[distance] = vegetationPositions[i];
-		}
-		glBindVertexArray(grassVAO);
-		glBindTexture(GL_TEXTURE_2D, grassTex);
-		grassShader.use();
-		for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
-		{
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, it->second);
-			grassShader.setMat4("model", model);
-			grassShader.setMat4("view", view);
-			grassShader.setMat4("projection", projection);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-		glEnable(GL_CULL_FACE);
+		//Rendering the target
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+		model = glm::rotate(model, (float)glm::radians(glfwGetTime() * 40), glm::vec3(1.0f, 0.3f, 0.5f));
+		objShader.use();
+		objShader.setMat4("model", model);
+		target.Draw(objShader);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
