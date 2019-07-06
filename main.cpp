@@ -5,6 +5,7 @@
 #include<glm\glm.hpp>
 #include<glm\gtc\matrix_transform.hpp>
 #include<glm\gtc\type_ptr.hpp>
+#include<glm\gtc\constants.hpp>
 #include<ft2build.h>
 #include FT_FREETYPE_H
 
@@ -41,6 +42,11 @@ float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
 
+//keyboard controlled debug ray
+float rayPosZ = 0.0f;
+float rayPosY = 0.0f;
+
+
 int main()
 {
 	//------------------------------------------------------------------------------------------------
@@ -68,7 +74,7 @@ int main()
 		return -1;
 	}
 
-	Text text("../OpenGL_DeformProj/arial.ttf", 0, 48, glm::vec3(0.5f, 0.8f, 0.2f));
+	Text text("../OpenGL_DeformProj/arial.ttf", 0, 24, glm::vec3(0, 0, 0));
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -238,7 +244,7 @@ int main()
 	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
 	objShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 
-	Model target("../../OpenGLAssets/testBottle/testBottle.obj");
+	Model target("../../OpenGLAssets/testModels/triangle.obj");
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
 
@@ -309,30 +315,38 @@ int main()
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilMask(0xFF);
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
-		model = glm::rotate(model, (float)glm::radians(glfwGetTime() * 40), glm::vec3(1.0f, 0.3f, 0.5f));
+		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0f));
+		//model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
+		//model = glm::rotate(model, (float)glm::radians(glfwGetTime() * 40), glm::vec3(1.0f, 0.3f, 0.5f));
 		objShader.use();
 		objShader.setMat4("model", model);
 		target.Draw(objShader);
 
+		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[0].Position, 1.0f));
+		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[1].Position, 1.0f));
+		glm::vec3 vert3 = (model * glm::vec4(target.meshes[0].vertices[2].Position, 1.0f));
+
+		glm::vec3 rayOrigin = glm::vec3(-1.0f, rayPosY, rayPosZ);
+
 		model = glm::mat4(1.0f);
-		renderRay(glm::vec3(-1.0f, -1.0f, 0.0f), glm::normalize(glm::vec3(2.0f, 1.0f, 3.0f)), view, model, projection, rayShader);
-		bool rayResult = basicRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(-1.0f, -1.0f, 0.0f), glm::normalize(glm::vec3(2.0f, 1.0f, 3.0f)));
+		renderRay(rayOrigin, glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f))* 1000000.0f, view, model, projection, rayShader);
+		rayOrigin  = (model * glm::vec4(rayOrigin, 1.0f));
+		glm::vec3 rayDirection = model * glm::vec4(glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)), 1.0f);
+
+		bool rayResult = basicRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
-		text.renderText(textShader, "FPS:" + std::to_string((int)(1 / deltaTime)), 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
-		//if (rayResult == glm::vec3(0, 0, 0))
-		//{
-		//	text.renderText(textShader, "no hit haha yes", 0.0f, windowHeight - 96.0f, 1.0f, textCanvas);
-		//}
+		text.renderText(textShader, "FPS:" + std::to_string((int)(1 / deltaTime)), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		if (rayResult == true)
+		{
+			text.renderText(textShader, "hit haha yes", 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
+		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	//glDeleteFramebuffers(1, &fbo);
 	glfwTerminate();
 	return 0;
 }
@@ -389,12 +403,29 @@ void processInput(GLFWwindow * window)
 			quadratic = 1.8;
 	}
 
+	//debug ray movement
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		rayPosY += deltaTime;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		rayPosY -= deltaTime;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		rayPosZ -= deltaTime;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		rayPosZ += deltaTime;
+	}
 }
 
 void renderRay(glm::vec3 rayOrigin, glm::vec3 rayDir, glm::mat4 view, glm::mat4 model, glm::mat4 projection, Shader& shader)
 {
 	//Render the ray (debug purposes)
-	glm::vec3 vertices[] = { rayOrigin, rayOrigin + rayDir * 10000.0f };
+	glm::vec3 vertices[] = { rayOrigin, rayOrigin + rayDir };
 	unsigned int VAO, VBO;
 	glGenBuffers(1, &VBO);
 	glGenVertexArrays(1, &VAO);
@@ -417,32 +448,43 @@ void renderRay(glm::vec3 rayOrigin, glm::vec3 rayDir, glm::mat4 view, glm::mat4 
 
 bool basicRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir)
 {
-	//Do actual math lmao
+	//find triangle plane's normal
 	glm::vec3 normal = glm::cross((v1 - v0), (v2 - v0));
+	
+	// finding point of intersection with triangular plane
 
+	//check if parallel
+	float NdotRayDirection = glm::dot(normal, rayDir);
+	if (fabs(NdotRayDirection) < 0.00001f) // almost 0 
+		return false;
+
+	// compute d parameter using equation 2
 	float planeDistance = glm::dot(normal, v0);
-	float parallelChecker = glm::dot(normal, rayDir);
-	if (parallelChecker == 0)
-		return false;
-	float hitDistance = -(glm::dot(normal, rayOrigin) + planeDistance) / parallelChecker;
-	if (hitDistance < 0)
-		return false;
-	glm::vec3 rayHit = rayOrigin + hitDistance * rayDir;
 
-	glm::vec3 edge0 = v1 - v0;
-	glm::vec3 edge1 = v2 - v1;
-	glm::vec3 edge2 = v0 - v2;
-	glm::vec3 C0 = rayHit - v0;
-	glm::vec3 C1 = rayHit - v1;
-	glm::vec3 C2 = rayHit - v2;
-	if (glm::dot(edge0, C0) < 0)
-		return false;
-	if (glm::dot(edge1, C1) < 0)
-		return false;
-	if (glm::dot(edge2, C2) < 0)
-		return false;
+	//find intersection distance
+	float t = -(glm::dot(normal, rayOrigin) + planeDistance) / NdotRayDirection; 
+	// check if the triangle is in behind the ray
+	if (t < 0) return false;
 
-	return true;
+	//find intersection
+	glm::vec3 P = rayOrigin + t * rayDir;
+
+	//Testing if ray is inside triangle
+	glm::vec3 C; // vector perpendicular to triangle's plane 
+
+	//edge 0
+	C = cross((v1 - v0), (P - v0));
+	if (glm::dot(normal, C) < 0) return false;
+
+	//edge 1
+	C = cross((v2 - v1), (P - v1));
+	if (glm::dot(normal, C) < 0)  return false;
+
+	// edge 2
+	C = glm::cross((v0 - v2), (P - v2));
+	if (glm::dot(normal, C) < 0) return false;
+
+	return true; // this ray hits the triangle 
 }
 
 void mouse_callback(GLFWwindow * window, double xpos, double ypos)
