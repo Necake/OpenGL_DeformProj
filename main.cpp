@@ -49,6 +49,9 @@ bool firstMouse = true;
 float rayPosZ = 0.0f;
 float rayPosY = 0.0f;
 
+//TODO: delete dis
+float vertY = 0;
+
 int main()
 {
 	//------------------------------------------------------------------------------------------------
@@ -207,7 +210,7 @@ int main()
 	glGenVertexArrays(1, &lampVAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 	glBindVertexArray(lampVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -247,7 +250,7 @@ int main()
 	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
 	objShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 
-	Model target("../../OpenGLAssets/testModels/testCube.obj");
+	Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
 
@@ -302,6 +305,9 @@ int main()
 		glBindVertexArray(0);
 		glDepthMask(GL_TRUE);
 
+		vertices[3] += deltaTime;
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);//this works, but is inefficient since we're reasigning the complete buffer
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 		//Rendering light geometry
 		glBindVertexArray(lampVAO);
 		for (int i = 0; i < 4; i++)
@@ -328,12 +334,12 @@ int main()
 		target.Draw(objShader);
 
 		//Wacky raytrace testing
-		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[0].Position, 1.0f));
-		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[1].Position, 1.0f));
-		glm::vec3 vert3 = (model * glm::vec4(target.meshes[0].vertices[2].Position, 1.0f));
+		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[0]].Position, 1.0f));
+		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[1]].Position, 1.0f));
+		glm::vec3 vert3 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[2]].Position, 1.0f));
 
-		glm::vec3 rayOrigin = glm::vec3(-1.0f, rayPosY, rayPosZ);
-		glm::vec3 rayDirection = glm::normalize(glm::vec3(1.0f, 0.0f, 0.7f));
+		glm::vec3 rayOrigin = glm::vec3(rayPosY, 1.0f, rayPosZ);
+		glm::vec3 rayDirection = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
 
 		model = glm::mat4(1.0f);
 		renderRay(rayOrigin, rayDirection * 1000000.0f, view, model, projection, rayShader);
@@ -352,6 +358,9 @@ int main()
 		if (rayResult == true)
 		{
 			text.renderText(textShader, "hit haha yes", 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
+			target.TranslateVertex(0, target.meshes[0].indices[0], glm::vec3(0, -deltaTime, 0)); 
+			target.TranslateVertex(0, target.meshes[0].indices[1], glm::vec3(0, -deltaTime, 0));
+			target.TranslateVertex(0, target.meshes[0].indices[2], glm::vec3(0, -deltaTime, 0));
 		}
 
 		glfwSwapBuffers(window);
@@ -418,10 +427,12 @@ void processInput(GLFWwindow * window)
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
 		rayPosY += deltaTime;
+		vertY += deltaTime;
 	}
 	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 	{
 		rayPosY -= deltaTime;
+		vertY -= deltaTime;
 	}
 	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
 	{

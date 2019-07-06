@@ -44,12 +44,12 @@ public:
 
 	/*  Functions  */
 	// constructor
-	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
+	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures, bool isDynamic)
 	{
 		this->vertices = vertices;
 		this->indices = indices;
 		this->textures = textures;
-
+		this->isDynamic = isDynamic;
 		// now that we have all the required data, set the vertex buffers and its attribute pointers.
 		setupMesh();
 	}
@@ -85,6 +85,13 @@ public:
 
 		// draw mesh
 		glBindVertexArray(VAO);
+
+		if (isDynamic) //Update entire VBO before render call (this is unoptimized) TODO: update only changed parts
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_DYNAMIC_DRAW);
+		}
+
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
@@ -95,7 +102,7 @@ public:
 private:
 	/*  Render data  */
 	unsigned int VBO, EBO;
-
+	bool isDynamic;
 	/*  Functions    */
 	// initializes all the buffer objects/arrays
 	void setupMesh()
@@ -111,10 +118,21 @@ private:
 		// A great thing about structs is that their memory layout is sequential for all its items.
 		// The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
 		// again translates to 3/2 floats which translates to a byte array.
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+		if (isDynamic)
+		{
+			std::cout << "dynamic mesh setup\n"; //TODO delet dis
+			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_DYNAMIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_DYNAMIC_DRAW);
+		}
+		else
+		{
+			std::cout << "static mesh setup\n"; //TODO delet dis
+			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+		}
+		
 
 		// set the vertex attribute pointers
 		// vertex Positions

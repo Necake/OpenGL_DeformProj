@@ -43,9 +43,9 @@ public:
 
 	/*  Functions   */
 	// constructor, expects a filepath to a 3D model.
-	Model(string const& path, bool gamma = false) : gammaCorrection(gamma)
+	Model(string const& path, bool isDynamic, bool gamma = false) : gammaCorrection(gamma)
 	{
-		loadModel(path);
+		loadModel(path, isDynamic);
 	}
 
 	// draws the model, and thus all its meshes
@@ -55,10 +55,24 @@ public:
 			meshes[i].Draw(shader);
 	}
 
+	// translates a single vertex in the model
+	void TranslateVertex(int meshIndex, int vertIndex, glm::vec3 offset)
+	{
+		this->meshes[meshIndex].vertices[vertIndex].Position += offset;
+	}
+	void TransformVertex(int meshIndex, int vertIndex, glm::mat4 matrix)
+	{
+		this->meshes[meshIndex].vertices[vertIndex].Position = matrix * glm::vec4(this->meshes[meshIndex].vertices[vertIndex].Position, 1.0f);
+	}
+	void SetVertexPosition(int meshIndex, int vertIndex, glm::vec3 position)
+	{
+		this->meshes[meshIndex].vertices[vertIndex].Position = position;
+	}
+
 private:
 	/*  Functions   */
 	// loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
-	void loadModel(string const& path)
+	void loadModel(string const& path, bool isDynamic)
 	{
 		// read file via ASSIMP
 		Assimp::Importer importer;
@@ -73,11 +87,11 @@ private:
 		directory = path.substr(0, path.find_last_of('/'));
 
 		// process ASSIMP's root node recursively
-		processNode(scene->mRootNode, scene);
+		processNode(scene->mRootNode, scene, isDynamic);
 	}
 
 	// processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
-	void processNode(aiNode * node, const aiScene * scene)
+	void processNode(aiNode * node, const aiScene * scene, bool isDynamic)
 	{
 		// process each mesh located at the current node
 		for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -85,17 +99,17 @@ private:
 			// the node object only contains indices to index the actual objects in the scene. 
 			// the scene contains all the data, node is just to keep stuff organized (like relations between nodes).
 			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-			meshes.push_back(processMesh(mesh, scene));
+			meshes.push_back(processMesh(mesh, scene, isDynamic));
 		}
 		// after we've processed all of the meshes (if any) we then recursively process each of the children nodes
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
 		{
-			processNode(node->mChildren[i], scene);
+			processNode(node->mChildren[i], scene, isDynamic);
 		}
 
 	}
 
-	Mesh processMesh(aiMesh * mesh, const aiScene * scene)
+	Mesh processMesh(aiMesh * mesh, const aiScene * scene, bool isDynamic)
 	{
 		// data to fill
 		vector<Vertex> vertices;
@@ -189,7 +203,7 @@ private:
 		textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 
 		// return a mesh object created from the extracted mesh data
-		return Mesh(vertices, indices, textures);
+		return Mesh(vertices, indices, textures, isDynamic);
 	}
 
 	// checks all material textures of a given type and loads the textures if they're not loaded yet.
