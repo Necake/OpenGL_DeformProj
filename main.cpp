@@ -247,7 +247,7 @@ int main()
 	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
 	objShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 
-	Model target("../../OpenGLAssets/testModels/triangle.obj");
+	Model target("../../OpenGLAssets/testModels/testCube.obj");
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
 
