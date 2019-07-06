@@ -11,7 +11,8 @@
 
 #include<iostream>
 #include<string>
-#include <fstream>
+#include<fstream>
+#include<set>
 #include "shader.h"
 #include "model.h"
 #include "rayUtil.h"
@@ -26,12 +27,8 @@ public:
 		std::cout << "Successfully constructed projectile\n";
 		std::ofstream vertOutputFile;
 		vertOutputFile.open("vertOutput.txt");
-		for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
-		{
-			vertOutputFile << "v  " << projectileMesh.meshes[0].vertices[i].Position.x << " " <<
-				projectileMesh.meshes[0].vertices[i].Position.y << " " << projectileMesh.meshes[0].vertices[i].Position.z << "\n";
-			
-		}
+		optimizeVertices();
+		std::cout << "optimized verts size: " << optimizedVerts.size();
 		vertOutputFile.close();
 		//std::cout << projectileMesh.meshes[0].vertices.size();//.vertices.size();
 	}
@@ -44,11 +41,11 @@ public:
 	void castRays(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
 	{
 		
-		for (int i = 0; i < 163; i++)
+		for (auto vertex : optimizedVerts)
 		{
 			//for every single vertex in the mesh, render a ray
-			renderRay(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[i]].Position,
-				glm::normalize(acceleration), view, model, projection, rayShader);
+			//renderRay(vertex, glm::normalize(acceleration), view, model, projection, rayShader);
+			bool intersect = MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration));
 		}
 	}
 
@@ -66,16 +63,41 @@ public:
 	Model projectileMesh;
 	glm::vec3 acceleration;
 private:
+	void optimizeVertices()
+	{
+		for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+		{
+			bool found = false;
+			for (int j = 0; j < optimizedVerts.size(); j++)
+			{
+				if (projectileMesh.meshes[0].vertices[i].Position == optimizedVerts[j])
+					found = true;
+			}
+			if(!found)
+				optimizedVerts.push_back(projectileMesh.meshes[0].vertices[i].Position);
+		}
+	}
 	glm::vec3 speed;
+	std::vector<glm::vec3> optimizedVerts;
 	Shader rayShader;
 };
 
-/*
+
 class PointProjectile
 {
 public:
+	PointProjectile(glm::vec3 pos, glm::vec3 acc):
+		projectilePosition(pos), acceleration(acc), 
+		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag")
+	{
+		std::cout << "Successfuly constructed point projectile\n";
+	}
+	glm::vec3 projectilePosition;
+	glm::vec3 acceleration;
 private:
-};*/
+	glm::vec3 speed;
+	Shader rayShader;
+};
 
 
 

@@ -16,7 +16,7 @@
 #include "model.h"
 #include "textRendering.h"
 #include "rayUtil.h"
-#include "projectile.h"
+//#include "projectile.h"
 
 #define __CAMSPEED 0.005f
 
@@ -48,7 +48,6 @@ bool firstMouse = true;
 //keyboard controlled debug ray
 float rayPosZ = 0.0f;
 float rayPosY = 0.0f;
-
 
 int main()
 {
@@ -104,7 +103,7 @@ int main()
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
 
 	Shader rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag");
-	Shader projectileShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
+	//Shader projectileShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
 
 	float vertices[] = {
 		// Back face
@@ -252,15 +251,8 @@ int main()
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
 
-	projectileShader.use();
-	for (int i = 0; i < 4; i++)
-	{
-		projectileShader.setPointLightAt("pointLights", i, lightPositions[i], lightDiffuse, linear, quadratic);
-	}
-	projectileShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
-
-	Projectile projectile("../../OpenGLAssets/testModels/testProjectile.obj", glm::vec3(1.0f, 0.0f, 0.0f));
-
+	double lastFPSCheck = glfwGetTime();
+	int currentFPS = 0;
 	//------------------------------------------------------------------------------------------------
 	//Main loop
 	//------------------------------------------------------------------------------------------------
@@ -295,12 +287,6 @@ int main()
 
 		//Dynamic light setup
 		objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
-		
-		projectileShader.use();
-		projectileShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
-		projectileShader.setMat4("view", view);
-		projectileShader.setMat4("projection", projection);
-		projectileShader.setVec3("viewPos", camera.Position);
 
 		glDepthMask(GL_FALSE);
 		// draw skybox as last
@@ -355,15 +341,14 @@ int main()
 		rayDirection = model * glm::vec4(rayDirection, 1.0f);
 
 		bool rayResult = MTRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
-		
-		projectileShader.use();
-		projectileShader.setMat4("model", model);
-		projectile.draw(projectileShader, model, view, projection, camera.Position);
-		projectile.castRays(view, model, projection);
-
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
-		text.renderText(textShader, "FPS:" + std::to_string((int)(1 / deltaTime)), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		if (glfwGetTime() - lastFPSCheck > 1.0)
+		{
+			lastFPSCheck = glfwGetTime();
+			currentFPS = 1 / deltaTime;
+		}
 		if (rayResult == true)
 		{
 			text.renderText(textShader, "hit haha yes", 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
