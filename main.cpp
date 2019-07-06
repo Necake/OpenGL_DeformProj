@@ -315,9 +315,9 @@ int main()
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilMask(0xFF);
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0f));
 		//model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
-		//model = glm::rotate(model, (float)glm::radians(glfwGetTime() * 40), glm::vec3(1.0f, 0.3f, 0.5f));
+		//model = glm::rotate(model, (float)glm::radians(90.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
+		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0f));
 		objShader.use();
 		objShader.setMat4("model", model);
 		target.Draw(objShader);
@@ -327,11 +327,12 @@ int main()
 		glm::vec3 vert3 = (model * glm::vec4(target.meshes[0].vertices[2].Position, 1.0f));
 
 		glm::vec3 rayOrigin = glm::vec3(-1.0f, rayPosY, rayPosZ);
+		glm::vec3 rayDirection = glm::normalize(glm::vec3(1.0f, 0.0f, 0.7f));
 
 		model = glm::mat4(1.0f);
-		renderRay(rayOrigin, glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f))* 1000000.0f, view, model, projection, rayShader);
+		renderRay(rayOrigin, rayDirection * 1000000.0f, view, model, projection, rayShader);
 		rayOrigin  = (model * glm::vec4(rayOrigin, 1.0f));
-		glm::vec3 rayDirection = model * glm::vec4(glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)), 1.0f);
+		rayDirection = model * glm::vec4(rayDirection, 1.0f);
 
 		bool rayResult = basicRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
 
@@ -452,11 +453,14 @@ bool basicRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin
 	glm::vec3 normal = glm::cross((v1 - v0), (v2 - v0));
 	
 	// finding point of intersection with triangular plane
-
+	
 	//check if parallel
 	float NdotRayDirection = glm::dot(normal, rayDir);
 	if (fabs(NdotRayDirection) < 0.00001f) // almost 0 
 		return false;
+
+	if (glm::dot(rayDir, normal) > 0)
+		return false; //we've hit a backface
 
 	// compute d parameter using equation 2
 	float planeDistance = glm::dot(normal, v0);
