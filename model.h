@@ -103,6 +103,7 @@ private:
 		vector<Texture> textures;
 
 		// Walk through each of the mesh's vertices
+		std::cout << "Num verts from loader: " << mesh->mNumVertices << "\n";
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 		{
 			Vertex vertex;
