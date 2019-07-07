@@ -17,8 +17,7 @@
 #include "textRendering.h"
 #include "rayUtil.h"
 #include "projectile.h"
-
-#define __CAMSPEED 0.005f
+#include "target.h"
 
 //------------------------------------------------------------------------------------------------
 //Function prototypes
@@ -231,11 +230,12 @@ int main()
 	glm::vec3 lightDiffuse = glm::vec3(0.66f, 0.86f, 0.97f);
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
-	objShader.setVec3("material.diffuse", target.material.diffuse);
-	objShader.setVec3("material.specular", target.material.specular);
+	//Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
+	Target target("../../OpenGLAssets/testModels/testPlane.obj", 1, 1, 1);
+	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
+	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -0.07f, 0.01f));
+	PointProjectile projectile(glm::vec3(0.0f, 0.21f, 0.0f), glm::vec3(0.0f, -0.07f, 0.01f));
 
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
@@ -312,22 +312,22 @@ int main()
 		glStencilMask(0xFF);
 		model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
-		model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
+		//model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
 		model = glm::translate(model, glm::vec3(0.1f, 0.2f, 0.1f));
 		objShader.use();
-		objShader.setMat4("model", model);
+		target.model = model;
 		target.Draw(objShader);
 
 		//First pass is for setting up the models
 		if (firstPass)
 		{
-			projectile.processTarget(target, model);
+			projectile.processTarget(target.targetModel, target.model);
 			std::cout << "Target has been set up.\n";
 			firstPass = false;
 		}
 		if (started) //When simulation is started(keystroke), start denting the target
 		{
-			projectile.dentTarget(target, deltaTime, model);
+			projectile.dentTarget(target.targetModel, deltaTime, target.model);
 		}
 
 		//Reset the model matrix and render the ray itself

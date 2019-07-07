@@ -93,7 +93,7 @@ namespace RayUtil
 	}
 
 	//Möller-Trumbore ray intersection algorithm
-	bool MTRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir)
+	bool MTRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir, float& t)
 	{
 		glm::vec3 v0v1 = v1 - v0;
 		glm::vec3 v0v2 = v2 - v0;
@@ -116,7 +116,7 @@ namespace RayUtil
 		if (v < 0 || u + v > 1)
 			return false; //same as above, different coord
 
-		float t = glm::dot(v0v2, qvec) * invDet; //will use later
+		t = glm::dot(v0v2, qvec) * invDet; //will use later
 		if (t < 0) //intersection is "behind" ray
 			return false;
 

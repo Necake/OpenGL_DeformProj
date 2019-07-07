@@ -49,7 +49,7 @@ public:
 		{
 			//for every single vertex in the mesh, render a ray
 			//renderRay(vertex, glm::normalize(acceleration), view, model, projection, rayShader);
-			bool intersect = RayUtil::MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration));
+			bool intersect = RayUtil::MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration), hitDistance);
 		}
 	}
 
@@ -82,6 +82,7 @@ private:
 		}
 	}
 	glm::vec3 speed;
+	float hitDistance;
 	std::vector<glm::vec3> optimizedVerts;
 	Shader rayShader;
 };
@@ -106,7 +107,7 @@ public:
 		glm::vec3 vert0 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv2]].Position, 1.0f));
-		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection));
+		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
 		if (rayResult)
 		{
 			acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
@@ -134,6 +135,16 @@ public:
 				affectedIndices.push_back(i + 2);
 			}
 		}
+		glm::vec3 hitPoint = projectilePosition + hitDistance * rayDirection;
+		std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
+		for (int i = 0; i < target.meshes[0].indices.size(); i++)
+		{
+			if ((target.meshes[0].vertices[target.meshes[0].indices[i]].Position - hitPoint).length() < 100.0f)
+			{
+				std::cout << "pushed a secondary vert\n";
+				indirectIndices.push_back(i);
+			}
+		}
 	}
 
 	//Dents a single triangle on a given target, and slows down the projectile appropriately
@@ -148,7 +159,11 @@ public:
 			//Update the deformed vertices in the vertex buffer
 			target.meshes[0].UpdateBuffer(affectedIndices[i]); 
 		}
-		
+		for (int i = 0; i < indirectIndices.size(); i++)
+		{
+			target.TranslateVertex(0, target.meshes[0].indices[indirectIndices[i]], speed * 0.5f);
+			target.meshes[0].UpdateBufferVertex(indirectIndices[i]);
+		}
 		projectilePosition += speed; //Change projectile position according to current speed
 
 		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
@@ -185,8 +200,10 @@ public:
 	glm::vec3 rayDirection; //Direction of the actual ray
 	
 private:
+	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile
 	vector<int> affectedIndices; //Indices of verts that have been affected by rays
+	vector<int> indirectIndices;
 	Shader rayShader; //Shader of the ray itself
 };
 

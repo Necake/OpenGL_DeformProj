@@ -110,6 +110,15 @@ public:
 		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex + 1] * sizeof(Vertex), sizeof(Vertex), &second);
 		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex + 2] * sizeof(Vertex), sizeof(Vertex), &third);
 	}
+	void UpdateBufferVertex(int firstIndex)
+	{
+		//vertex to be updated
+		Vertex first = this->vertices[indices[firstIndex]];
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		//passing the vert into the buffer
+		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex] * sizeof(Vertex), sizeof(Vertex), &first);;
+	}
 
 private:
 	/*  Render data  */
