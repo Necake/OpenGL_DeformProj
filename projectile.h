@@ -1,7 +1,11 @@
 #ifndef PROJECTILE_H
 #define PROJECTILE_H
+//-------------------------------------------------------------------------------------
+// Projectile class, contains 2 classes: Projectile (with a mesh), and PointProjectile.
+// Both classes are ray casters, PointProjectile casts a single ray, Projectile casts
+// a ray per vertex
+//-------------------------------------------------------------------------------------
 
-//ovde ce da stoji model i par vektora
 #include<GLAD\glad.h>
 #include<GLFW\glfw3.h>
 #include<glm\glm.hpp>

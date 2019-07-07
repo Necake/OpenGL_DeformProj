@@ -1,5 +1,9 @@
 #ifndef MESH_H
 #define MESH_H
+//-------------------------------------------------------------------------------------
+// Mesh class, contains a single mesh, which is a building block for loaded models
+// Also contains all the details such as vertices, indices etc.
+//-------------------------------------------------------------------------------------
 
 #include <glad/glad.h> // holds all OpenGL type declarations
 
@@ -43,21 +47,21 @@ public:
 	unsigned int VAO;
 
 	/*  Functions  */
-	// constructor
+	//Constructor
 	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures, bool isDynamic)
 	{
 		this->vertices = vertices;
 		this->indices = indices;
 		this->textures = textures;
 		this->isDynamic = isDynamic;
-		// now that we have all the required data, set the vertex buffers and its attribute pointers.
+		//Now that we have all the required data, set the vertex buffers and its attribute pointers.
 		setupMesh();
 	}
 
-	// render the mesh
+	//Render the mesh
 	void Draw(Shader shader)
 	{
-		// bind appropriate textures
+		//Bind appropriate textures
 		unsigned int diffuseNr = 1;
 		unsigned int specularNr = 1;
 		unsigned int normalNr = 1;
@@ -83,29 +87,24 @@ public:
 			glBindTexture(GL_TEXTURE_2D, textures[i].id);
 		}
 
-		// draw mesh
+		//Draw mesh
 		glBindVertexArray(VAO);
-
-		//if (isDynamic) //Update entire VBO before render call (this is unoptimized) TODO: update only changed parts
-		//{
-		//	UpdateBuffer();
-		//}
-
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 
-		// always good practice to set everything back to defaults once configured.
+		//Set everything back to defaults once configured.
 		glActiveTexture(GL_TEXTURE0);
 	}
 
+	//Updates single triangle in array buffer, given the first index of triangle verts
 	void UpdateBuffer(int firstIndex)
 	{
-		Vertex first = this->vertices[indices[firstIndex]];//first vert I need to update
-		Vertex second = this->vertices[indices[firstIndex + 1]];//first vert I need to update
-		Vertex third = this->vertices[indices[firstIndex + 2]];//first vert I need to update
+		//vertices of the triangle that need to be updated
+		Vertex first = this->vertices[indices[firstIndex]];
+		Vertex second = this->vertices[indices[firstIndex + 1]];
+		Vertex third = this->vertices[indices[firstIndex + 2]];
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		//glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_DYNAMIC_DRAW);
 		//passing the first, second, and third vertex into buffer
 		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex] * sizeof(Vertex), sizeof(Vertex), &first);
 		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex + 1] * sizeof(Vertex), sizeof(Vertex), &second);
@@ -131,6 +130,7 @@ private:
 		// A great thing about structs is that their memory layout is sequential for all its items.
 		// The effect is that we can simply pass a pointer to the struct and it translates perfectly to a glm::vec3/2 array which
 		// again translates to 3/2 floats which translates to a byte array.
+		//If the mesh is dynamic, it gets set up for dynamic drawing
 		if (isDynamic)
 		{
 			std::cout << "dynamic mesh setup\n"; //TODO delet dis
@@ -138,7 +138,7 @@ private:
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_DYNAMIC_DRAW);
 		}
-		else
+		else //Otherwise, it gets set up for static drawing
 		{
 			std::cout << "static mesh setup\n"; //TODO delet dis
 			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
