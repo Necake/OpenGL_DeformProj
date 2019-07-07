@@ -127,7 +127,7 @@ public:
 		}
 	}
 
-	void dentTarget(Model& target, float time) //for now, this dents the appropriate tri, but the wrong way lol
+	void dentTarget(Model& target, float time, glm::mat4 model) //for now, this dents the appropriate tri, but the wrong way lol
 	{
 		for (int i = 0; i < affectedIndices.size(); i += 3)
 		{
@@ -135,6 +135,8 @@ public:
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1]], speed);
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2]], speed);
 		}
+
+		projectilePosition += speed;
 
 		if (glm::dot(speed, rayDirection) < __EPSILON)
 		{

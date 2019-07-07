@@ -303,9 +303,6 @@ int main()
 		glBindVertexArray(0);
 		glDepthMask(GL_TRUE);
 
-		//vertices[3] += deltaTime;
-		//glBindBuffer(GL_ARRAY_BUFFER, VBO);//this works, but is inefficient since we're reasigning the complete buffer
-		//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 		//Rendering light geometry
 		glBindVertexArray(lampVAO);
 		for (int i = 0; i < 4; i++)
@@ -324,7 +321,7 @@ int main()
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilMask(0xFF);
 		model = glm::mat4(1.0f);
-		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
 		model = glm::translate(model, glm::vec3(0.1f, 0.2f, 0.1f));
 		objShader.use();
@@ -332,16 +329,16 @@ int main()
 		target.Draw(objShader);
 
 		//Wacky raytrace testing
-		//projectile.projectilePosition = glm::vec3(rayPosY, 1.0f, rayPosZ);
 		if (firstPass)
 		{
 			projectile.processTarget(target, model);
 			std::cout << "we out here\n";
 			firstPass = false;
 		}
-		if(started)
-			projectile.dentTarget(target, deltaTime);
-		//bool rayResult = projectile.CastRay(target, 33, 34, 35, model);
+		if (started)
+		{
+			projectile.dentTarget(target, deltaTime, model);
+		}
 
 		model = glm::mat4(1.0f);
 
@@ -355,16 +352,6 @@ int main()
 			lastFPSCheck = glfwGetTime();
 			currentFPS = 1 / deltaTime;
 		}
-		//if (rayResult == true /*&& dentSpeed > __EPSILON*/)
-		//{
-		//	text.renderText(textShader, "ray hit; spd: x:" + std::to_string(projectile.speed.x) + " y:"
-		//		+ std::to_string(projectile.speed.y) + " z:" + std::to_string(projectile.speed.z), 
-		//		0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
-		//	//target.TranslateVertex(0, target.meshes[0].indices[33], glm::vec3(0, -dentSpeed, 0));
-		//	//target.TranslateVertex(0, target.meshes[0].indices[34], glm::vec3(0, -dentSpeed, 0));
-		//	//target.TranslateVertex(0, target.meshes[0].indices[35], glm::vec3(0, -dentSpeed, 0));
-		//	//dentSpeed -= deltaTime / 100;
-		//}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
