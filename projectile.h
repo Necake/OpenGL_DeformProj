@@ -21,7 +21,7 @@ class Projectile
 {
 public:
 	Projectile(std::string meshPath, glm::vec3 accel) :
-		projectileMesh(meshPath.c_str()), acceleration(accel), 
+		projectileMesh(meshPath.c_str(), false), acceleration(accel), 
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag")
 	{
 		std::cout << "Successfully constructed projectile\n";
@@ -45,7 +45,7 @@ public:
 		{
 			//for every single vertex in the mesh, render a ray
 			//renderRay(vertex, glm::normalize(acceleration), view, model, projection, rayShader);
-			bool intersect = MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration));
+			bool intersect = RayUtil::MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration));
 		}
 	}
 
@@ -88,13 +88,44 @@ class PointProjectile
 public:
 	PointProjectile(glm::vec3 pos, glm::vec3 acc):
 		projectilePosition(pos), acceleration(acc), 
-		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag")
+		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag"), rayDirection(acceleration)
 	{
+		speed = glm::vec3(0, 0, 0);
 		std::cout << "Successfuly constructed point projectile\n";
+	}
+
+	void CastRay(Model target, int indexv0, int indexv1, int indexv2, glm::mat4 model, float time)
+	{
+		glm::vec3 vert0 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv0]].Position, 1.0f));
+		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv1]].Position, 1.0f));
+		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv2]].Position, 1.0f));
+		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(acceleration));
+		if (rayResult)
+		{
+			if (firstHit)
+			{
+				acceleration = glm::vec3(0, 0, 0);
+				firstHit = false;
+			}
+			target.TranslateVertex(0, target.meshes[0].indices[indexv0], speed);
+			target.TranslateVertex(0, target.meshes[0].indices[indexv1], speed);
+			target.TranslateVertex(0, target.meshes[0].indices[indexv2], speed);
+			Update(time);
+		}
+	}
+	void RenderRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
+	{
+		RayUtil::renderRay(projectilePosition, acceleration, view, model, projection, rayShader);
+	}
+	void Update(float time)
+	{
+		speed += acceleration * time;
 	}
 	glm::vec3 projectilePosition;
 	glm::vec3 acceleration;
+	glm::vec3 rayDirection;
 private:
+	bool firstHit = true;
 	glm::vec3 speed;
 	Shader rayShader;
 };

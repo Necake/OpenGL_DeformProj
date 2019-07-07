@@ -55,7 +55,7 @@ public:
 			meshes[i].Draw(shader);
 	}
 
-	// translates a single vertex in the model
+	// translates a single vertex in the model given the index
 	void TranslateVertex(int meshIndex, int vertIndex, glm::vec3 offset)
 	{
 		this->meshes[meshIndex].vertices[vertIndex].Position += offset;

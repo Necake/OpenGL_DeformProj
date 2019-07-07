@@ -51,6 +51,7 @@ float rayPosY = 0.0f;
 
 //TODO: delete dis
 float vertY = 0;
+float dentSpeed = 0.01f;
 
 int main()
 {
@@ -342,11 +343,11 @@ int main()
 		glm::vec3 rayDirection = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
 
 		model = glm::mat4(1.0f);
-		renderRay(rayOrigin, rayDirection * 1000000.0f, view, model, projection, rayShader);
+		RayUtil::renderRay(rayOrigin, rayDirection * 1000000.0f, view, model, projection, rayShader);
 		rayOrigin  = (model * glm::vec4(rayOrigin, 1.0f));
 		rayDirection = model * glm::vec4(rayDirection, 1.0f);
 
-		bool rayResult = MTRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
+		bool rayResult = RayUtil::MTRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
 		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
@@ -355,12 +356,13 @@ int main()
 			lastFPSCheck = glfwGetTime();
 			currentFPS = 1 / deltaTime;
 		}
-		if (rayResult == true)
+		if (rayResult == true && dentSpeed > __EPSILON)
 		{
 			text.renderText(textShader, "hit haha yes", 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
-			target.TranslateVertex(0, target.meshes[0].indices[0], glm::vec3(0, -deltaTime, 0)); 
-			target.TranslateVertex(0, target.meshes[0].indices[1], glm::vec3(0, -deltaTime, 0));
-			target.TranslateVertex(0, target.meshes[0].indices[2], glm::vec3(0, -deltaTime, 0));
+			target.TranslateVertex(0, target.meshes[0].indices[0], glm::vec3(0, -dentSpeed, 0)); 
+			target.TranslateVertex(0, target.meshes[0].indices[1], glm::vec3(0, -dentSpeed, 0));
+			target.TranslateVertex(0, target.meshes[0].indices[2], glm::vec3(0, -dentSpeed, 0));
+			dentSpeed -= deltaTime / 100;
 		}
 
 		glfwSwapBuffers(window);
