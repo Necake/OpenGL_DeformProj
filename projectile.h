@@ -86,10 +86,11 @@ private:
 	Shader rayShader;
 };
 
-
+//Projectile that has only one ray
 class PointProjectile
 {
 public:
+	//Constructor, takes the position/origin of ray and the acceleration
 	PointProjectile(glm::vec3 pos, glm::vec3 acc):
 		projectilePosition(pos), acceleration(acc), 
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag"), rayDirection(acceleration)
@@ -98,6 +99,7 @@ public:
 		std::cout << "Successfuly constructed point projectile\n";
 	}
 
+	//Casts a single ray on a given triangle of a target (transformed using a model matrix)
 	bool CastRay(Model &target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
 	{
 		std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
@@ -107,7 +109,7 @@ public:
 		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection));
 		if (rayResult)
 		{
-			acceleration = -rayDirection;
+			acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
 			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 << 
 				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
 				"\n speed: " << speed.x << speed.y << speed.z << "\n";
@@ -116,12 +118,15 @@ public:
 		return false;
 	}
 
+	//Mesh preprocessing, detects all intersections, bruteforce
 	void processTarget(Model& target, glm::mat4 model)
 	{
+		//For each triangle in the mesh, do tuff
 		for (int i = 0; i < target.meshes[0].indices.size(); i += 3)
 		{
+			//Cast rays on each triangle
 			bool rayResult = CastRay(target, i, i + 1, i + 2, model);
-			if (rayResult)
+			if (rayResult) //If we get a collision, push the vertices into those that need to be deformed
 			{
 				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
 				affectedIndices.push_back(i);
@@ -131,23 +136,31 @@ public:
 		}
 	}
 
-	void dentTarget(Model& target, float time, glm::mat4 model) //for now, this dents the appropriate tri, but the wrong way lol
+	//Dents a single triangle on a given target, and slows down the projectile appropriately
+	void dentTarget(Model& target, float time, glm::mat4 model)
 	{
+		//For each of the affected triangles, get the indices and translade according verts
 		for (int i = 0; i < affectedIndices.size(); i += 3)
 		{
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i]], speed);
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1]], speed);
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2]], speed);
-			target.meshes[0].UpdateBuffer(affectedIndices[i]);
+			//Update the deformed vertices in the vertex buffer
+			target.meshes[0].UpdateBuffer(affectedIndices[i]); 
 		}
-		projectilePosition += speed;
+		
+		projectilePosition += speed; //Change projectile position according to current speed
 
+		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
+		//because we don't want backwards movement
 		if (glm::dot(speed, rayDirection) < __EPSILON)
 		{
 			speed = glm::vec3(0, 0, 0);
 		}
 		else
+		{ //else, we update the speed appropriately
 			speed += acceleration * time;
+		}
 	}
 
 	//Renders a ray that has length of acceleration
@@ -155,25 +168,26 @@ public:
 	{
 		RayUtil::renderRay(projectilePosition, rayDirection, view, model, projection, rayShader);
 	}
+	
 	//Renders a ray with infinite length
 	void RenderInfiniteRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
 	{
 		RayUtil::renderRay(projectilePosition, rayDirection * 1000000.0f, view, model, projection, rayShader);
 	}
+	
 	void Update(float time)
 	{
 		//lol nothing for now	
 	}
-	glm::vec3 projectilePosition;
-	glm::vec3 acceleration;
-	glm::vec3 rayDirection;
-	glm::vec3 speed; //TODO: make private again
+	
+	glm::vec3 projectilePosition; //Position of projectile, also ray origin
+	glm::vec3 acceleration; //Acceleration of body
+	glm::vec3 rayDirection; //Direction of the actual ray
+	
 private:
-	bool firstHit = true;
-	vector<int> affectedIndices;
-
-
-	Shader rayShader;
+	glm::vec3 speed; //Current speed of projectile
+	vector<int> affectedIndices; //Indices of verts that have been affected by rays
+	Shader rayShader; //Shader of the ray itself
 };
 
 

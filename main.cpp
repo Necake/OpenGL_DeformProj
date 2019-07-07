@@ -20,15 +20,22 @@
 
 #define __CAMSPEED 0.005f
 
+//------------------------------------------------------------------------------------------------
 //Function prototypes
+//------------------------------------------------------------------------------------------------
+GLFWwindow* setupWindow();
+void setupCallbacks(GLFWwindow* window);
 void loadTexture(unsigned int* texture, bool isRGBA, const char* path);
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
+void setupStaticLights(Shader& targetShader, glm::vec3* lightPositions, glm::vec3 lightDiffuse);
 
+//------------------------------------------------------------------------------------------------
 //Global variables
+//------------------------------------------------------------------------------------------------
 int windowWidth = 800, windowHeight = 600;
 float deltaTime = 0.0f, lastFrame = 0.0f;
 float mousePitch = 0.0f, mouseYaw = 0.0f;
@@ -36,15 +43,13 @@ float fov = 45.0f;
 int shineStr = 32;
 float linear = 0.045f, quadratic = 0.0075;
 
-// camera
+//------------------------------------------------------------------------------------------------
+//Camera variables
+//------------------------------------------------------------------------------------------------
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = windowWidth / 2.0f;
 float lastY = windowHeight / 2.0f;
 bool firstMouse = true;
-
-//keyboard controlled debug ray
-float rayPosZ = 0.0f;
-float rayPosY = 0.0f;
 
 //TODO: delete dis
 float dentSpeed = 0.01f; bool started = false;
@@ -56,18 +61,7 @@ int main()
 	//------------------------------------------------------------------------------------------------
 
 	//Window init
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", NULL, NULL);
-	if (window == NULL)
-	{
-		std::cout << "Failed to create window!" << std::endl;
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
+	GLFWwindow* window = setupWindow();
 
 	//Loading opengl func pointers
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -76,14 +70,13 @@ int main()
 		return -1;
 	}
 
+	//Initialize text font
 	Text text("../OpenGL_DeformProj/arial.ttf", 0, 24, glm::vec3(0, 0, 0));
 
-	glViewport(0, 0, windowWidth, windowHeight);
-	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
+	//Setup function callbacks for input etc.
+	setupCallbacks(window);
 
+	//Setting up opengl state constants
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -94,15 +87,13 @@ int main()
 	//------------------------------------------------------------------------------------------------
 	//Geometry and shader setup
 	//------------------------------------------------------------------------------------------------
-
 	Shader objShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
 	Shader lightShader("../OpenGL_DeformProj/lightVert.vert", "../OpenGL_DeformProj/lightFrag.frag");
-	Shader singleColorShader("../OpenGL_DeformProj/singleColor.vert", "../OpenGL_DeformProj/singleColor.frag");
 	Shader textShader("../OpenGL_DeformProj/textShader.vert", "../OpenGL_DeformProj/textShader.frag");
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
-
 	Shader rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag");
 
+	//Raw geometry for lights and the skybox
 	float vertices[] = {
 		// Back face
 		-0.5f, -0.5f, -0.5f,
@@ -191,6 +182,7 @@ int main()
 		-1.0f, -1.0f,  1.0f,
 		 1.0f, -1.0f,  1.0f
 	};
+	//Array of positions for lights in the scene
 	glm::vec3 lightPositions[] = {
 		glm::vec3(3.0f,  1.0f,  10.0f),
 		glm::vec3(11.0f, -15.0f, -20.0f),
@@ -199,20 +191,21 @@ int main()
 	};
 
 	//Light (cube) geometry setup
-	unsigned int VBO, EBO, lampVAO;
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
+	unsigned int lampVBO, lampVAO;
+	glGenBuffers(1, &lampVBO);
 	glGenVertexArrays(1, &lampVAO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glBindVertexArray(lampVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
+	//------------------------------------------------------------------------------------------------
 	//Skybox setup
+	//------------------------------------------------------------------------------------------------
 	std::vector<std::string> skyBoxFaces = {
 		"../../OpenGLAssets/Skybox/right.jpg",
 		"../../OpenGLAssets/Skybox/left.jpg",
@@ -234,26 +227,23 @@ int main()
 	skyboxShader.use();
 	skyboxShader.setInt("skyBox", 0);
 
-	//Static light setup
-	objShader.use();
+	//------------------------------------------------------------------------------------------------
+	//Target, lights, and projectile setup
+	//------------------------------------------------------------------------------------------------
 	glm::vec3 lightDiffuse = glm::vec3(0.66f, 0.86f, 0.97f);
-	for (int i = 0; i < 4; i++)
-	{
-		objShader.setPointLightAt("pointLights", i, lightPositions[i], lightDiffuse, linear, quadratic);
-	}
-	glm::vec3 sunDiffuse = glm::vec3(1.0f, 0.7f, 0.3f);
-	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
-	objShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
-
+	setupStaticLights(objShader, lightPositions, lightDiffuse);
+	//Loading the target
 	Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
+	//Loading the projectile
+	PointProjectile projectile(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -0.07f, 0.01f));
 
-	PointProjectile projectile(glm::vec3(rayPosY, 1.0f, rayPosZ), glm::vec3(0.0f, -0.1f, 0.0f));
-
+	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
 	bool firstPass = true; 
+
 	//------------------------------------------------------------------------------------------------
 	//Main loop
 	//------------------------------------------------------------------------------------------------
@@ -283,8 +273,6 @@ int main()
 		objShader.setMat4("projection", projection);
 		objShader.setVec3("viewPos", camera.Position);
 		objShader.setFloat("material.shininess", 32.0f); //the only thing left in the material not managed by textures
-		singleColorShader.setVec3("viewPos", camera.Position);
-		singleColorShader.setFloat("material.shininess", 32.0f);
 
 		//Dynamic light setup
 		objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
@@ -361,6 +349,32 @@ int main()
 	return 0;
 }
 
+GLFWwindow* setupWindow()
+{
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "bottom text", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create window!" << std::endl;
+		return NULL;
+	}
+	glfwMakeContextCurrent(window);
+	return window;
+}
+
+void setupCallbacks(GLFWwindow* window)
+{
+	glViewport(0, 0, windowWidth, windowHeight);
+	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+}
+
 //Handles all the input
 void processInput(GLFWwindow * window)
 {
@@ -416,20 +430,7 @@ void processInput(GLFWwindow * window)
 	//debug ray movement
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
-		rayPosY += deltaTime;
 		started = true;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-	{
-		rayPosY -= deltaTime;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-	{
-		rayPosZ -= deltaTime;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-	{
-		rayPosZ += deltaTime;
 	}
 }
 
@@ -485,6 +486,18 @@ void loadTexture(unsigned int* texture, bool isRGBA, const char* path)
 void framebufferSizeCallback(GLFWwindow * window, int width, int height)
 {
 	glViewport(0, 0, width, height);
+}
+
+void setupStaticLights(Shader& targetShader, glm::vec3* lightPositions, glm::vec3 lightDiffuse)
+{
+	targetShader.use();
+	for (int i = 0; i < 4; i++)
+	{
+		targetShader.setPointLightAt("pointLights", i, lightPositions[i], lightDiffuse, linear, quadratic);
+	}
+	glm::vec3 sunDiffuse = glm::vec3(1.0f, 0.7f, 0.3f);
+	glm::vec3 sunDirection = glm::vec3(-0.2f, -1.0f, -0.3f);
+	targetShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 }
 
 unsigned int loadCubemap(vector<std::string> faces)
