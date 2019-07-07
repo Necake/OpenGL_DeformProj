@@ -30,18 +30,16 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-unsigned int loadCubemap(vector<std::string> faces);
 void setupStaticLights(Shader& targetShader, glm::vec3* lightPositions, glm::vec3 lightDiffuse);
+unsigned int loadCubemap(vector<std::string> faces);
 
 //------------------------------------------------------------------------------------------------
 //Global variables
 //------------------------------------------------------------------------------------------------
-int windowWidth = 800, windowHeight = 600;
-float deltaTime = 0.0f, lastFrame = 0.0f;
-float mousePitch = 0.0f, mouseYaw = 0.0f;
-float fov = 45.0f;
-int shineStr = 32;
-float linear = 0.045f, quadratic = 0.0075;
+int windowWidth = 800, windowHeight = 600; //Window size
+float deltaTime = 0.0f, lastFrame = 0.0f; //Time counter related stuff
+float mousePitch = 0.0f, mouseYaw = 0.0f; //Mouse info
+float linear = 0.045f, quadratic = 0.0075; //Light calculation constants
 
 //------------------------------------------------------------------------------------------------
 //Camera variables
@@ -249,14 +247,17 @@ int main()
 	//------------------------------------------------------------------------------------------------
 	while (!glfwWindowShouldClose(window))
 	{
+		//Fps and deltaTime updating
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
-
+		
+		//Input handling
 		processInput(window);
+
+		//State setting
 		glEnable(GL_STENCIL_TEST);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
 		//Clearing leftover data
 		glClearColor(.1f, .1f, .1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -277,6 +278,7 @@ int main()
 		//Dynamic light setup
 		objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
 
+		//Setting up skybox
 		glDepthMask(GL_FALSE);
 		// draw skybox as last
 		skyboxShader.use();
@@ -316,27 +318,27 @@ int main()
 		objShader.setMat4("model", model);
 		target.Draw(objShader);
 
-		//Wacky raytrace testing
+		//First pass is for setting up the models
 		if (firstPass)
 		{
 			projectile.processTarget(target, model);
-			std::cout << "we out here\n";
+			std::cout << "Target has been set up.\n";
 			firstPass = false;
 		}
-		if (started)
+		if (started) //When simulation is started(keystroke), start denting the target
 		{
 			projectile.dentTarget(target, deltaTime, model);
 		}
 
+		//Reset the model matrix and render the ray itself
 		model = glm::mat4(1.0f);
-
 		projectile.RenderInfiniteRay(view, model, projection);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
 		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
 		if (glfwGetTime() - lastFPSCheck > 0.3)
-		{
+		{ //Updating the fps meter every 1/3 of a second
 			lastFPSCheck = glfwGetTime();
 			currentFPS = 1 / deltaTime;
 		}
@@ -349,6 +351,11 @@ int main()
 	return 0;
 }
 
+//------------------------------------------------------------------------------------------------
+//Function definitions
+//------------------------------------------------------------------------------------------------
+
+//Does basic GLFW window setup
 GLFWwindow* setupWindow()
 {
 	glfwInit();
@@ -366,6 +373,7 @@ GLFWwindow* setupWindow()
 	return window;
 }
 
+//Sets up function callbacks for things input and window resizing
 void setupCallbacks(GLFWwindow* window)
 {
 	glViewport(0, 0, windowWidth, windowHeight);
@@ -373,87 +381,6 @@ void setupCallbacks(GLFWwindow* window)
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-}
-
-//Handles all the input
-void processInput(GLFWwindow * window)
-{
-	//Quitting the window on escape press
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-	{
-		glfwSetWindowShouldClose(window, true);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
-	{
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
-	{
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
-	//Camera movement
-	float camSpeed = 2.5f * deltaTime;
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
-
-	if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS)
-	{
-		linear -= deltaTime;
-		if (linear <= 0.0014)
-			linear = 0.0014;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_KP_7) == GLFW_PRESS)
-	{
-		linear += deltaTime;
-		if (linear >= 0.7)
-			linear = 0.7;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS)
-	{
-		quadratic -= deltaTime / 10.0f;
-		if (quadratic <= 0.000007)
-			quadratic = 0.000007;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_KP_8) == GLFW_PRESS)
-	{
-		quadratic += deltaTime / 10.0f;
-		if (quadratic >= 1.8)
-			quadratic = 1.8;
-	}
-
-	//debug ray movement
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-	{
-		started = true;
-	}
-}
-
-void mouse_callback(GLFWwindow * window, double xpos, double ypos)
-{
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos;
-	lastX = xpos;
-	lastY = ypos;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-void scroll_callback(GLFWwindow * window, double xoffset, double yoffset)
-{
-	camera.ProcessMouseScroll(yoffset);
 }
 
 //Loading textures from external source with assumed wrapping parameters
@@ -483,11 +410,71 @@ void loadTexture(unsigned int* texture, bool isRGBA, const char* path)
 }
 
 //Callback for resizing the window
-void framebufferSizeCallback(GLFWwindow * window, int width, int height)
+void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
 
+//Handles all the input
+void processInput(GLFWwindow * window)
+{
+	//Utility block
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+	{ //Quitting the window on escape press
+		glfwSetWindowShouldClose(window, true);
+	}
+	else if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS)
+	{ //Wireframe mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+	else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS)
+	{ //Shaded mode
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	//Camera movement
+	float camSpeed = 2.5f * deltaTime;
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.ProcessKeyboard(RIGHT, deltaTime);
+
+	//debug ray movement
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		started = true;
+	}
+}
+
+//Mouse movement handling
+void mouse_callback(GLFWwindow * window, double xpos, double ypos)
+{
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos;
+	lastX = xpos;
+	lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+//Scroll wheel handling
+void scroll_callback(GLFWwindow * window, double xoffset, double yoffset)
+{
+	camera.ProcessMouseScroll(yoffset);
+}
+
+//Static light setup for object shader, these get calculated before the actual render
 void setupStaticLights(Shader& targetShader, glm::vec3* lightPositions, glm::vec3 lightDiffuse)
 {
 	targetShader.use();
@@ -500,6 +487,7 @@ void setupStaticLights(Shader& targetShader, glm::vec3* lightPositions, glm::vec
 	targetShader.setDirectionalLight("dirLight", sunDirection, sunDiffuse);
 }
 
+//Loads cubemap for the skybox
 unsigned int loadCubemap(vector<std::string> faces)
 {
 	unsigned int textureID;
