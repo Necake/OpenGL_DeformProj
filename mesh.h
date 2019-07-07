@@ -86,10 +86,10 @@ public:
 		// draw mesh
 		glBindVertexArray(VAO);
 
-		if (isDynamic) //Update entire VBO before render call (this is unoptimized) TODO: update only changed parts
-		{
-			UpdateBuffer();
-		}
+		//if (isDynamic) //Update entire VBO before render call (this is unoptimized) TODO: update only changed parts
+		//{
+		//	UpdateBuffer();
+		//}
 
 		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -98,10 +98,18 @@ public:
 		glActiveTexture(GL_TEXTURE0);
 	}
 
-	void UpdateBuffer()
+	void UpdateBuffer(int firstIndex)
 	{
+		Vertex first = this->vertices[indices[firstIndex]];//first vert I need to update
+		Vertex second = this->vertices[indices[firstIndex + 1]];//first vert I need to update
+		Vertex third = this->vertices[indices[firstIndex + 2]];//first vert I need to update
+
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_DYNAMIC_DRAW);
+		//glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_DYNAMIC_DRAW);
+		//passing the first, second, and third vertex into buffer
+		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex] * sizeof(Vertex), sizeof(Vertex), &first);
+		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex + 1] * sizeof(Vertex), sizeof(Vertex), &second);
+		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex + 2] * sizeof(Vertex), sizeof(Vertex), &third);
 	}
 
 private:

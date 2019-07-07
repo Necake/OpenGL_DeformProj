@@ -134,8 +134,8 @@ public:
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i]], speed);
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1]], speed);
 			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2]], speed);
+			target.meshes[0].UpdateBuffer(affectedIndices[i]);
 		}
-
 		projectilePosition += speed;
 
 		if (glm::dot(speed, rayDirection) < __EPSILON)

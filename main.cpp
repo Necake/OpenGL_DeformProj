@@ -347,7 +347,7 @@ int main()
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
 		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
-		if (glfwGetTime() - lastFPSCheck > 1.0)
+		if (glfwGetTime() - lastFPSCheck > 0.3)
 		{
 			lastFPSCheck = glfwGetTime();
 			currentFPS = 1 / deltaTime;
