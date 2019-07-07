@@ -46,6 +46,7 @@ public:
 	Model(string const& path, bool isDynamic, bool gamma = false) : gammaCorrection(gamma)
 	{
 		loadModel(path, isDynamic);
+		std::cout << "Num indices from loader: " << this->meshes[0].indices.size() << "\n";
 	}
 
 	// draws the model, and thus all its meshes
@@ -117,7 +118,7 @@ private:
 		vector<Texture> textures;
 
 		// Walk through each of the mesh's vertices
-		std::cout << "Num verts from loader: " << mesh->mNumVertices << "\n";
+		std::cout << "Num verts from loader: " << mesh->mNumVertices << "\n"; //TODO: delete debug output later
 		std::cout << "Num faces from loader: " << mesh->mNumFaces << "\n";
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 		{

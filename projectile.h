@@ -90,43 +90,83 @@ public:
 		projectilePosition(pos), acceleration(acc), 
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag"), rayDirection(acceleration)
 	{
-		speed = glm::vec3(0, 0, 0);
+		speed = acceleration;
 		std::cout << "Successfuly constructed point projectile\n";
 	}
 
-	void CastRay(Model target, int indexv0, int indexv1, int indexv2, glm::mat4 model, float time)
+	bool CastRay(Model &target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
 	{
+		std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
 		glm::vec3 vert0 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv2]].Position, 1.0f));
-		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(acceleration));
+		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection));
 		if (rayResult)
 		{
-			if (firstHit)
+			acceleration = -rayDirection;
+			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 << 
+				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
+				"\n speed: " << speed.x << speed.y << speed.z << "\n";
+			return true;
+		}
+		return false;
+	}
+
+	void processTarget(Model& target, glm::mat4 model)
+	{
+		for (int i = 0; i < target.meshes[0].indices.size(); i += 3)
+		{
+			bool rayResult = CastRay(target, i, i + 1, i + 2, model);
+			if (rayResult)
 			{
-				acceleration = glm::vec3(0, 0, 0);
-				firstHit = false;
+				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
+				affectedIndices.push_back(i);
+				affectedIndices.push_back(i + 1);
+				affectedIndices.push_back(i + 2);
 			}
-			target.TranslateVertex(0, target.meshes[0].indices[indexv0], speed);
-			target.TranslateVertex(0, target.meshes[0].indices[indexv1], speed);
-			target.TranslateVertex(0, target.meshes[0].indices[indexv2], speed);
-			Update(time);
 		}
 	}
+
+	void dentTarget(Model& target, float time) //for now, this dents the appropriate tri, but the wrong way lol
+	{
+		for (int i = 0; i < affectedIndices.size(); i += 3)
+		{
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i]], speed);
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1]], speed);
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2]], speed);
+		}
+
+		if (glm::dot(speed, rayDirection) < __EPSILON)
+		{
+			speed = glm::vec3(0, 0, 0);
+		}
+		else
+			speed += acceleration * time;
+	}
+
+	//Renders a ray that has length of acceleration
 	void RenderRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
 	{
-		RayUtil::renderRay(projectilePosition, acceleration, view, model, projection, rayShader);
+		RayUtil::renderRay(projectilePosition, rayDirection, view, model, projection, rayShader);
+	}
+	//Renders a ray with infinite length
+	void RenderInfiniteRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
+	{
+		RayUtil::renderRay(projectilePosition, rayDirection * 1000000.0f, view, model, projection, rayShader);
 	}
 	void Update(float time)
 	{
-		speed += acceleration * time;
+		//lol nothing for now	
 	}
 	glm::vec3 projectilePosition;
 	glm::vec3 acceleration;
 	glm::vec3 rayDirection;
+	glm::vec3 speed; //TODO: make private again
 private:
 	bool firstHit = true;
-	glm::vec3 speed;
+	vector<int> affectedIndices;
+
+
 	Shader rayShader;
 };
 

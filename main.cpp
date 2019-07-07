@@ -16,7 +16,7 @@
 #include "model.h"
 #include "textRendering.h"
 #include "rayUtil.h"
-//#include "projectile.h"
+#include "projectile.h"
 
 #define __CAMSPEED 0.005f
 
@@ -27,9 +27,6 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 unsigned int loadCubemap(vector<std::string> faces);
-bool basicRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir);
-bool MTRayCheck(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 rayOrigin, glm::vec3 rayDir);
-void renderRay(glm::vec3 rayOrigin, glm::vec3 rayDir, glm::mat4 view, glm::mat4 model, glm::mat4 projection, Shader& shader);
 
 //Global variables
 int windowWidth = 800, windowHeight = 600;
@@ -50,8 +47,7 @@ float rayPosZ = 0.0f;
 float rayPosY = 0.0f;
 
 //TODO: delete dis
-float vertY = 0;
-float dentSpeed = 0.01f;
+float dentSpeed = 0.01f; bool started = false;
 
 int main()
 {
@@ -89,7 +85,6 @@ int main()
 	glfwSetScrollCallback(window, scroll_callback);
 
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_STENCIL_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_CULL_FACE); //enable culling
@@ -107,7 +102,6 @@ int main()
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
 
 	Shader rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag");
-	//Shader projectileShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
 
 	float vertices[] = {
 		// Back face
@@ -211,7 +205,7 @@ int main()
 	glGenVertexArrays(1, &lampVAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glBindVertexArray(lampVAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -255,8 +249,11 @@ int main()
 	objShader.setVec3("material.diffuse", target.material.diffuse);
 	objShader.setVec3("material.specular", target.material.specular);
 
+	PointProjectile projectile(glm::vec3(rayPosY, 1.0f, rayPosZ), glm::vec3(0.0f, -0.1f, 0.0f));
+
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
+	bool firstPass = true; 
 	//------------------------------------------------------------------------------------------------
 	//Main loop
 	//------------------------------------------------------------------------------------------------
@@ -306,9 +303,9 @@ int main()
 		glBindVertexArray(0);
 		glDepthMask(GL_TRUE);
 
-		vertices[3] += deltaTime;
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);//this works, but is inefficient since we're reasigning the complete buffer
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+		//vertices[3] += deltaTime;
+		//glBindBuffer(GL_ARRAY_BUFFER, VBO);//this works, but is inefficient since we're reasigning the complete buffer
+		//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 		//Rendering light geometry
 		glBindVertexArray(lampVAO);
 		for (int i = 0; i < 4; i++)
@@ -327,27 +324,29 @@ int main()
 		glStencilFunc(GL_ALWAYS, 1, 0xFF);
 		glStencilMask(0xFF);
 		model = glm::mat4(1.0f);
-		//model = glm::scale(model, glm::vec3(0.05f, 0.05f, 0.05f));
-		//model = glm::rotate(model, (float)glm::radians(90.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
-		model = glm::translate(model, glm::vec3(0.0f, 0.2f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
+		model = glm::translate(model, glm::vec3(0.1f, 0.2f, 0.1f));
 		objShader.use();
 		objShader.setMat4("model", model);
 		target.Draw(objShader);
 
 		//Wacky raytrace testing
-		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[0]].Position, 1.0f));
-		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[1]].Position, 1.0f));
-		glm::vec3 vert3 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[2]].Position, 1.0f));
-
-		glm::vec3 rayOrigin = glm::vec3(rayPosY, 1.0f, rayPosZ);
-		glm::vec3 rayDirection = glm::normalize(glm::vec3(0.0f, -1.0f, 0.0f));
+		//projectile.projectilePosition = glm::vec3(rayPosY, 1.0f, rayPosZ);
+		if (firstPass)
+		{
+			projectile.processTarget(target, model);
+			std::cout << "we out here\n";
+			firstPass = false;
+		}
+		if(started)
+			projectile.dentTarget(target, deltaTime);
+		//bool rayResult = projectile.CastRay(target, 33, 34, 35, model);
 
 		model = glm::mat4(1.0f);
-		RayUtil::renderRay(rayOrigin, rayDirection * 1000000.0f, view, model, projection, rayShader);
-		rayOrigin  = (model * glm::vec4(rayOrigin, 1.0f));
-		rayDirection = model * glm::vec4(rayDirection, 1.0f);
 
-		bool rayResult = RayUtil::MTRayCheck(vert1, vert2, vert3, rayOrigin, rayDirection);
+		projectile.RenderInfiniteRay(view, model, projection);
+
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
 		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
@@ -356,14 +355,16 @@ int main()
 			lastFPSCheck = glfwGetTime();
 			currentFPS = 1 / deltaTime;
 		}
-		if (rayResult == true && dentSpeed > __EPSILON)
-		{
-			text.renderText(textShader, "hit haha yes", 0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
-			target.TranslateVertex(0, target.meshes[0].indices[0], glm::vec3(0, -dentSpeed, 0)); 
-			target.TranslateVertex(0, target.meshes[0].indices[1], glm::vec3(0, -dentSpeed, 0));
-			target.TranslateVertex(0, target.meshes[0].indices[2], glm::vec3(0, -dentSpeed, 0));
-			dentSpeed -= deltaTime / 100;
-		}
+		//if (rayResult == true /*&& dentSpeed > __EPSILON*/)
+		//{
+		//	text.renderText(textShader, "ray hit; spd: x:" + std::to_string(projectile.speed.x) + " y:"
+		//		+ std::to_string(projectile.speed.y) + " z:" + std::to_string(projectile.speed.z), 
+		//		0.0f, windowHeight - 48.0f, 1.0f, textCanvas);
+		//	//target.TranslateVertex(0, target.meshes[0].indices[33], glm::vec3(0, -dentSpeed, 0));
+		//	//target.TranslateVertex(0, target.meshes[0].indices[34], glm::vec3(0, -dentSpeed, 0));
+		//	//target.TranslateVertex(0, target.meshes[0].indices[35], glm::vec3(0, -dentSpeed, 0));
+		//	//dentSpeed -= deltaTime / 100;
+		//}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -429,12 +430,11 @@ void processInput(GLFWwindow * window)
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
 		rayPosY += deltaTime;
-		vertY += deltaTime;
+		started = true;
 	}
 	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 	{
 		rayPosY -= deltaTime;
-		vertY -= deltaTime;
 	}
 	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
 	{
