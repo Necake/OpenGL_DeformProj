@@ -3,3 +3,5 @@ OpenGL_DeformProj.vcxproj.user
 OpenGL_DeformProj.vcxproj.filters
 OpenGL_DeformProj.vcxproj
 vertOutput.txt
+objFrag_full.frag
+objFrag.frag

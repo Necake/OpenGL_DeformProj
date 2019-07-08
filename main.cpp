@@ -231,11 +231,11 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	//Loading the target
 	//Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
-	Target target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 7.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testSphere.obj", 3.0f, 7.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 0.21f, 0.0f), glm::vec3(0.0f, -0.03f, 0.01f));
+	PointProjectile projectile(glm::vec3(0.0f, 2.21f, -1.5f), glm::vec3(0.0f, -0.09f, 0.05f));
 
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
@@ -276,7 +276,7 @@ int main()
 		objShader.setFloat("material.shininess", 32.0f); //the only thing left in the material not managed by textures
 
 		//Dynamic light setup
-		objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
+		//objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
 
 		//Setting up skybox
 		glDepthMask(GL_FALSE);
@@ -319,14 +319,15 @@ int main()
 		target.Draw(objShader);
 
 		//First pass is for setting up the models
-		if (firstPass)
-		{
-			projectile.processTarget(target, target.model);
-			std::cout << "Target has been set up.\n";
-			firstPass = false;
-		}
+		
 		if (started) //When simulation is started(keystroke), start denting the target
 		{
+			if (firstPass)
+			{
+				projectile.processTarget(target, target.model);
+				std::cout << "Target has been set up.\n";
+				firstPass = false;
+			}
 			projectile.dentTarget(target, deltaTime, target.model);
 		}
 

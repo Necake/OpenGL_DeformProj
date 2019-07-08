@@ -104,7 +104,7 @@ public:
 	//Casts a single ray on a given triangle of a target (transformed using a model matrix)
 	bool CastRay(Target &target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
 	{
-		std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
+		//std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
 		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
@@ -145,7 +145,7 @@ public:
 			newVert.first = i;
 			glm::vec3 vect = (hitPoint - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
 			newVert.second = target.falloffFunc(glm::length(vect));
-			std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
+			//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
 			affectedVertices.push_back(newVert);
 		}
 	}

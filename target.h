@@ -37,13 +37,11 @@ public:
 	//Calculates ray falloff given the material parameters, returns intensity in % of original force
 	float falloffFunc(float input) 
 	{
-		std::cout << "registered falloff with: " << input << " ";
+		//std::cout << "registered falloff with: " << input << " ";
 		if (input >= falloff) //input needs to be from 0 to falloff, otherwise we go negative
 			return 0;		  //since the input is going to be vector distance, it's always going to be >=0
 
 		float res = powf((1 - (input / falloff) * (input / falloff)), roughness);
-		if (res>1.0f)
-			std::cout << "intensity " << res * 100 << "%\n";
 		return res;
 	}
 
