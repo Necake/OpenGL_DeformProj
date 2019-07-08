@@ -133,20 +133,21 @@ public:
 				hitPoint = projectilePosition + hitDistance * rayDirection;
 				std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
 				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
-				for (int j = i; j < i + 3; j++)
-				{
-					
-				}
+				collision = true;
 			}
 		}
-		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
+		if (collision) //If (at least one) ray has intersected with the target
 		{
-			std::pair<int, float> newVert;
-			newVert.first = i;
-			glm::vec3 vect = (hitPoint - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
-			newVert.second = target.falloffFunc(glm::length(vect));
-			//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
-			affectedVertices.push_back(newVert);
+			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target
+			{
+				std::pair<int, float> newVert;
+				newVert.first = i; //take the index of the vertex, and the amount of fore we apply on it 
+				glm::vec3 distance = (hitPoint - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
+				newVert.second = target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
+				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
+				if (newVert.second > __EPSILON) //If the vertex is actually affected by the ray in any way, we push it back
+					affectedVertices.push_back(newVert);
+			}
 		}
 	}
 
@@ -160,11 +161,6 @@ public:
 			//Update the deformed vertices in the vertex buffer
 			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
 		}
-		/*for (int i = 0; i < indirectIndices.size(); i++)
-		{
-			target.TranslateVertex(0, target.meshes[0].indices[indirectIndices[i]], speed * 0.5f);
-			target.meshes[0].UpdateBufferVertex(indirectIndices[i]);
-		}*/
 		projectilePosition += speed; //Change projectile position according to current speed
 
 		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
@@ -202,6 +198,7 @@ public:
 	
 private:
 	float hitDistance;
+	bool collision = false;
 	glm::vec3 speed; //Current speed of projectile
 	glm::vec3 hitPoint;
 	//Indices of verts affected by rays, along with the % of force acting upon them

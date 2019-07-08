@@ -31,11 +31,8 @@ public:
 		targetModel.Draw(shader);
 	}
 
-	Model targetModel;
-	glm::mat4 model;
-
 	//Calculates ray falloff given the material parameters, returns intensity in % of original force
-	float falloffFunc(float input) 
+	float falloffFunc(float input)
 	{
 		//std::cout << "registered falloff with: " << input << " ";
 		if (input >= falloff) //input needs to be from 0 to falloff, otherwise we go negative
@@ -45,6 +42,8 @@ public:
 		return res;
 	}
 
+	Model targetModel;
+	glm::mat4 model;
 private:
 	float falloff;
 	float roughness;
