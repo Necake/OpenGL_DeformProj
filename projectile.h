@@ -111,7 +111,6 @@ public:
 		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
 		if (rayResult)
 		{
-			acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
 			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 << 
 				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
 				"\n speed: " << speed.x << speed.y << speed.z << "\n";
@@ -129,8 +128,8 @@ public:
 			bool rayResult = CastRay(target, i, i + 1, i + 2, model);
 			if (rayResult) //If we get a collision, push the vertices into those that need to be deformed
 			{
-				hitPoint = projectilePosition + hitDistance * rayDirection;
-				std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
+				hitPoint = projectilePosition + hitDistance * glm::normalize(rayDirection);
+				std::cout << "hit distance: " << hitDistance << "\nhitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
 				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
 				collision = true;
 			}
@@ -139,7 +138,6 @@ public:
 	//Mesh preprocessing, detects all intersections, bruteforce
 	void processTarget(Target& target, glm::mat4 model)
 	{
-		processRays(target, model);
 
 		if (collision) //If (at least one) ray has intersected with the target
 		{
@@ -166,18 +164,6 @@ public:
 			//Update the deformed vertices in the vertex buffer
 			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
 		}
-		projectilePosition += speed; //Change projectile position according to current speed
-
-		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
-		//because we don't want backwards movement
-		if (glm::dot(speed, rayDirection) < __EPSILON)
-		{
-			speed = glm::vec3(0, 0, 0);
-		}
-		else
-		{ //else, we update the speed appropriately
-			speed += acceleration * time;
-		}
 	}
 
 	//Renders a ray that has length of acceleration
@@ -192,18 +178,54 @@ public:
 		RayUtil::renderRay(projectilePosition, rayDirection * 1000000.0f, view, model, projection, rayShader);
 	}
 	
-	void Update(float time)
+	void Update(Target& target, float time, glm::mat4 model)
 	{
-		//lol nothing for now	
+		if (collision)
+		{
+			projectilePosition += speed; //Change projectile position according to current speed
+			hitDistance = glm::length(projectilePosition - hitPoint);
+			if (hitDistance < 0.05f)
+			{
+				isColliding = true;
+				acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
+				std::cout << "we hit the mesh\n";
+			}
+			if (isColliding)
+			{
+				if (!hasProcessed)
+				{
+					hasProcessed = true;
+					processTarget(target, model);
+				}
+				else
+				{
+					dentTarget(target, time, model);
+				}
+			}
+
+		   //If the speed beomes the opposite direction of the ray, we hammer it at zero,
+		   //because we don't want backwards movement
+			if (glm::dot(speed, rayDirection) < __EPSILON)
+			{
+				speed = glm::vec3(0, 0, 0);
+			}
+			else
+			{ //else, we update the speed appropriately
+				speed += acceleration * time;
+			}
+
+		}
 	}
 	
 	glm::vec3 projectilePosition; //Position of projectile, also ray origin
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
+	float hitDistance; //todo make private
 	
 private:
-	float hitDistance;
 	bool collision = false;
+	bool isColliding = false;
+	bool hasProcessed = false;
 	glm::vec3 speed; //Current speed of projectile
 	glm::vec3 hitPoint;
 	//Indices of verts affected by rays, along with the % of force acting upon them
