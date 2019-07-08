@@ -16,7 +16,7 @@
 #include<iostream>
 #include<string>
 #include<fstream>
-#include<set>
+#include<utility>
 #include "shader.h"
 #include "model.h"
 #include "rayUtil.h"
@@ -130,21 +130,21 @@ public:
 			if (rayResult) //If we get a collision, push the vertices into those that need to be deformed
 			{
 				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
-				affectedIndices.push_back(i);
-				affectedIndices.push_back(i + 1);
-				affectedIndices.push_back(i + 2);
+				affectedIndices.push_back(std::make_pair(i, 0.1f));
+				affectedIndices.push_back(std::make_pair(i + 1, 0.1f));
+				affectedIndices.push_back(std::make_pair(i + 2, 0.1f));
 			}
 		}
 		glm::vec3 hitPoint = projectilePosition + hitDistance * rayDirection;
 		std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
-		for (int i = 0; i < target.meshes[0].indices.size(); i++)
+		/*for (int i = 0; i < target.meshes[0].indices.size(); i++)
 		{
 			if ((target.meshes[0].vertices[target.meshes[0].indices[i]].Position - hitPoint).length() < 100.0f)
 			{
 				std::cout << "pushed a secondary vert\n";
 				indirectIndices.push_back(i);
 			}
-		}
+		}*/
 	}
 
 	//Dents a single triangle on a given target, and slows down the projectile appropriately
@@ -153,17 +153,17 @@ public:
 		//For each of the affected triangles, get the indices and translade according verts
 		for (int i = 0; i < affectedIndices.size(); i += 3)
 		{
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i]], speed);
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1]], speed);
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2]], speed);
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i].first], speed * affectedIndices[i].second);
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1].first], speed * affectedIndices[i].second);
+			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2].first], speed * affectedIndices[i].second);
 			//Update the deformed vertices in the vertex buffer
-			target.meshes[0].UpdateBuffer(affectedIndices[i]); 
+			target.meshes[0].UpdateBufferTriangle(affectedIndices[i].first);
 		}
-		for (int i = 0; i < indirectIndices.size(); i++)
+		/*for (int i = 0; i < indirectIndices.size(); i++)
 		{
 			target.TranslateVertex(0, target.meshes[0].indices[indirectIndices[i]], speed * 0.5f);
 			target.meshes[0].UpdateBufferVertex(indirectIndices[i]);
-		}
+		}*/
 		projectilePosition += speed; //Change projectile position according to current speed
 
 		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
@@ -202,8 +202,8 @@ public:
 private:
 	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile
-	vector<int> affectedIndices; //Indices of verts that have been affected by rays
-	vector<int> indirectIndices;
+	//Indices of verts affected by rays, along with the % of force acting upon them
+	std::vector<std::pair<int,float>> affectedIndices; 
 	Shader rayShader; //Shader of the ray itself
 };
 

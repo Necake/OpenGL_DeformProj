@@ -97,7 +97,7 @@ public:
 	}
 
 	//Updates single triangle in array buffer, given the first index of triangle verts
-	void UpdateBuffer(int firstIndex)
+	void UpdateBufferTriangle(int firstIndex)
 	{
 		//vertices of the triangle that need to be updated
 		Vertex first = this->vertices[indices[firstIndex]];
