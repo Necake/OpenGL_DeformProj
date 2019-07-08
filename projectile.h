@@ -120,10 +120,9 @@ public:
 		return false;
 	}
 
-	//Mesh preprocessing, detects all intersections, bruteforce
-	void processTarget(Target& target, glm::mat4 model)
+	void processRays(Target& target, glm::mat4 model)
 	{
-		//For each triangle in the mesh, do tuff
+		//For each triangle in the mesh, do stuff
 		for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
 		{
 			//Cast rays on each triangle
@@ -136,6 +135,12 @@ public:
 				collision = true;
 			}
 		}
+	}
+	//Mesh preprocessing, detects all intersections, bruteforce
+	void processTarget(Target& target, glm::mat4 model)
+	{
+		processRays(target, model);
+
 		if (collision) //If (at least one) ray has intersected with the target
 		{
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target

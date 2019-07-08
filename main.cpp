@@ -234,8 +234,8 @@ int main()
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 2.21f, -1.5f), glm::vec3(0.0f, -0.09f, 0.05f));
-
+	PointProjectile projectile(glm::vec3(0.0f, 2.21f, -1.5f), glm::vec3(0.0f, -0.03f, 0.02f));
+	
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
