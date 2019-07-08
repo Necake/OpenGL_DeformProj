@@ -199,7 +199,7 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, lampVBO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-
+	
 	//------------------------------------------------------------------------------------------------
 	//Skybox setup
 	//------------------------------------------------------------------------------------------------
@@ -235,7 +235,7 @@ int main()
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 0.21f, 0.0f), glm::vec3(0.0f, -0.07f, 0.01f));
+	PointProjectile projectile(glm::vec3(0.0f, 0.21f, 0.0f), glm::vec3(0.0f, -0.03f, 0.01f));
 
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
