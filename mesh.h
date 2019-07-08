@@ -117,7 +117,16 @@ public:
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		//passing the vert into the buffer
-		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex] * sizeof(Vertex), sizeof(Vertex), &first);;
+		glBufferSubData(GL_ARRAY_BUFFER, indices[firstIndex] * sizeof(Vertex), sizeof(Vertex), &first);
+	}
+	void UpdateBufferVertexDirect(int index)
+	{
+		//vertex to be updated
+		Vertex first = this->vertices[index];
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		//passing the vert into the buffer
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vertex), sizeof(Vertex), &first);
 	}
 
 private:

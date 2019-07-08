@@ -231,7 +231,7 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	//Loading the target
 	//Model target("../../OpenGLAssets/testModels/testPlane.obj", true);
-	Target target("../../OpenGLAssets/testModels/testPlane.obj", 1, 1, 1);
+	Target target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 7.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
@@ -321,13 +321,13 @@ int main()
 		//First pass is for setting up the models
 		if (firstPass)
 		{
-			projectile.processTarget(target.targetModel, target.model);
+			projectile.processTarget(target, target.model);
 			std::cout << "Target has been set up.\n";
 			firstPass = false;
 		}
 		if (started) //When simulation is started(keystroke), start denting the target
 		{
-			projectile.dentTarget(target.targetModel, deltaTime, target.model);
+			projectile.dentTarget(target, deltaTime, target.model);
 		}
 
 		//Reset the model matrix and render the ray itself
@@ -336,7 +336,7 @@ int main()
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
-		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		text.renderText(textShader, "FPS:" + std::to_string(currentFPS) + std::to_string(projectile.projectilePosition.y), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
 		if (glfwGetTime() - lastFPSCheck > 0.3)
 		{ //Updating the fps meter every 1/3 of a second
 			lastFPSCheck = glfwGetTime();

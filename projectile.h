@@ -17,6 +17,7 @@
 #include<string>
 #include<fstream>
 #include<utility>
+#include "target.h"
 #include "shader.h"
 #include "model.h"
 #include "rayUtil.h"
@@ -101,12 +102,12 @@ public:
 	}
 
 	//Casts a single ray on a given triangle of a target (transformed using a model matrix)
-	bool CastRay(Model &target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
+	bool CastRay(Target &target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
 	{
 		std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
-		glm::vec3 vert0 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv0]].Position, 1.0f));
-		glm::vec3 vert1 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv1]].Position, 1.0f));
-		glm::vec3 vert2 = (model * glm::vec4(target.meshes[0].vertices[target.meshes[0].indices[indexv2]].Position, 1.0f));
+		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
+		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
+		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
 		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
 		if (rayResult)
 		{
@@ -120,44 +121,44 @@ public:
 	}
 
 	//Mesh preprocessing, detects all intersections, bruteforce
-	void processTarget(Model& target, glm::mat4 model)
+	void processTarget(Target& target, glm::mat4 model)
 	{
 		//For each triangle in the mesh, do tuff
-		for (int i = 0; i < target.meshes[0].indices.size(); i += 3)
+		for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
 		{
 			//Cast rays on each triangle
 			bool rayResult = CastRay(target, i, i + 1, i + 2, model);
 			if (rayResult) //If we get a collision, push the vertices into those that need to be deformed
 			{
+				hitPoint = projectilePosition + hitDistance * rayDirection;
+				std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
 				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
-				affectedIndices.push_back(std::make_pair(i, 0.1f));
-				affectedIndices.push_back(std::make_pair(i + 1, 0.1f));
-				affectedIndices.push_back(std::make_pair(i + 2, 0.1f));
+				for (int j = i; j < i + 3; j++)
+				{
+					
+				}
 			}
 		}
-		glm::vec3 hitPoint = projectilePosition + hitDistance * rayDirection;
-		std::cout << "hitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
-		/*for (int i = 0; i < target.meshes[0].indices.size(); i++)
+		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 		{
-			if ((target.meshes[0].vertices[target.meshes[0].indices[i]].Position - hitPoint).length() < 100.0f)
-			{
-				std::cout << "pushed a secondary vert\n";
-				indirectIndices.push_back(i);
-			}
-		}*/
+			std::pair<int, float> newVert;
+			newVert.first = i;
+			glm::vec3 vect = (hitPoint - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
+			newVert.second = target.falloffFunc(glm::length(vect));
+			std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
+			affectedVertices.push_back(newVert);
+		}
 	}
 
 	//Dents a single triangle on a given target, and slows down the projectile appropriately
-	void dentTarget(Model& target, float time, glm::mat4 model)
+	void dentTarget(Target& target, float time, glm::mat4 model)
 	{
 		//For each of the affected triangles, get the indices and translade according verts
-		for (int i = 0; i < affectedIndices.size(); i += 3)
+		for (int i = 0; i < affectedVertices.size(); i++)
 		{
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i].first], speed * affectedIndices[i].second);
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+1].first], speed * affectedIndices[i].second);
-			target.TranslateVertex(0, target.meshes[0].indices[affectedIndices[i+2].first], speed * affectedIndices[i].second);
+			target.targetModel.TranslateVertex(0, affectedVertices[i].first, speed * affectedVertices[i].second);
 			//Update the deformed vertices in the vertex buffer
-			target.meshes[0].UpdateBufferTriangle(affectedIndices[i].first);
+			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
 		}
 		/*for (int i = 0; i < indirectIndices.size(); i++)
 		{
@@ -202,8 +203,9 @@ public:
 private:
 	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile
+	glm::vec3 hitPoint;
 	//Indices of verts affected by rays, along with the % of force acting upon them
-	std::vector<std::pair<int,float>> affectedIndices; 
+	std::vector<std::pair<int,float>> affectedVertices; 
 	Shader rayShader; //Shader of the ray itself
 };
 

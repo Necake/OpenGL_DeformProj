@@ -61,6 +61,9 @@ public:
 	{
 		this->meshes[meshIndex].vertices[vertIndex].Position += offset;
 	}
+
+
+
 	void TransformVertex(int meshIndex, int vertIndex, glm::mat4 matrix)
 	{
 		this->meshes[meshIndex].vertices[vertIndex].Position = matrix * glm::vec4(this->meshes[meshIndex].vertices[vertIndex].Position, 1.0f);
