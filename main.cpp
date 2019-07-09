@@ -237,8 +237,8 @@ int main()
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.0f));
-	Projectile legitProjectile("../../OpenGLAssets/testModels/triangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
+	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
+	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileTriangle.obj", glm::vec3(0.005f, -0.03f, 0.0f));
 	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
 	//Fps counter constants
@@ -321,7 +321,7 @@ int main()
 		model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		//model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
-		model = glm::translate(model, glm::vec3(0.1f, -1.2f, 0.1f));
+		model = glm::translate(model, glm::vec3(0.5f, -1.2f, 0.2f));
 		objShader.use();
 		target.model = model;
 		target.Draw(objShader);

@@ -10,6 +10,7 @@
 
 #include<iostream>
 #include<string>
+#include<vector>
 #include "shader.h"
 #include "model.h"
 #include "rayUtil.h"
@@ -22,6 +23,7 @@ public:
 	{
 		model = glm::mat4(1.0f);
 		std::cout << "Successfully set up target\n";
+		OptimizeVertices();
 	}
 
 	void Draw(Shader& shader)
@@ -49,7 +51,23 @@ public:
 
 	Model targetModel;
 	glm::mat4 model;
+	std::vector<glm::vec3> optimizedVerts;
 private:
+	void OptimizeVertices()
+	{
+		for (int i = 0; i < targetModel.meshes[0].vertices.size(); i++)
+		{
+			bool found = false;
+			for (int j = 0; j < optimizedVerts.size(); j++)
+			{
+				if (targetModel.meshes[0].vertices[i].Position == optimizedVerts[j])
+					found = true;
+			}
+			if (!found)
+				optimizedVerts.push_back(targetModel.meshes[0].vertices[i].Position);
+		}
+	}
+
 	float falloff;
 	float roughness;
 	float threshold;

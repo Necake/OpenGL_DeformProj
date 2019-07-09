@@ -37,6 +37,7 @@ public:
 
 		//std::cout << projectileMesh.meshes[0].vertices.size();//.vertices.size();
 	}
+
 	//Casts a single ray on a given triangle of a target, given the ray origin (transformed using a model matrix)
 	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model)
 	{
@@ -55,7 +56,7 @@ public:
 
 			if (hitDistance < minHitDistance) //finding the point nearest to the target
 			{
-				minHitDistance = hitDistance; 
+				minHitDistance = hitDistance;
 				nearestOrigin = rayOrigin;
 				nearestVert = newVert;
 			}
@@ -63,6 +64,15 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	bool CastInverseRay(int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model)
+	{
+		float hitDistance;
+		glm::vec3 vert0 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv0]].Position, 1.0f));
+		glm::vec3 vert1 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv1]].Position, 1.0f));
+		glm::vec3 vert2 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv2]].Position, 1.0f));
+		return RayUtil::MTRayCheck(vert0, vert1, vert2, model * glm::vec4(rayOrigin, 1.0f), glm::normalize(-rayDirection), hitDistance);
 	}
 
 	void ProcessRays(Target& target, glm::mat4 model)
@@ -79,6 +89,19 @@ public:
 			}
 		}
 	}
+
+	void ProcessInverseRays(Target& target, glm::mat4 model)
+	{
+		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
+		{
+			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j+=3)
+			{
+				bool invRayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model);
+
+			}
+		}
+	}
+
 	//Mesh preprocessing, detects all intersections, bruteforce
 	void ProcessTarget(Target& target, glm::mat4 model)
 	{
@@ -96,6 +119,7 @@ public:
 					newVert.second += target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
 
 				}
+				newVert.second = newVert.second * 0.5f; //todo delete
 				if (newVert.second > 1.0f) //ovo je raspali zbir, raznese model previse, todo change
 					newVert.second = 1.0f;
 				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
@@ -135,13 +159,11 @@ public:
 			for (int i = 0; i < optimizedVerts.size(); i++)
 			{
 				optimizedVerts[i] += speed; //Change position of all vertices according to current speed
-				std::cout << "updated projectile mesh" << speed.y << "\n";
 			}
 			for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
 			{
 				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
 				projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
-				std::cout << "updated projectile mesh" << speed.y << "\n";
 			}
 			nearestOrigin += speed;
 			minHitDistance = glm::length(nearestOrigin - nearestVert);
