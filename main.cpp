@@ -230,11 +230,11 @@ int main()
 	glm::vec3 lightDiffuse = glm::vec3(0.66f, 0.86f, 0.97f);
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 7.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testBoobies.obj", 3.0f, 7.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 2.1f, -0.05f), glm::vec3(0.0f, -0.03f, 0.0f));
+	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.0f));
 	
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
@@ -322,7 +322,7 @@ int main()
 		{
 			if (firstPass) //First pass is for setting up the models, all done in 1 frame lol
 			{
-				projectile.processRays(target, model);
+				projectile.ProcessRay(target, model);
 				//projectile.processTarget(target, target.model);
 				std::cout << "Target has been set up.\n";
 				firstPass = false;
@@ -332,11 +332,11 @@ int main()
 
 		//Reset the model matrix and render the ray itself
 		model = glm::mat4(1.0f);
-		projectile.RenderRay(view, model, projection);
+		projectile.RenderInfiniteRay(view, model, projection);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
-		text.renderText(textShader, "FPS:" + std::to_string(currentFPS) + "\nhitDist: " + std::to_string(projectile.hitDistance), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
 		if (glfwGetTime() - lastFPSCheck > 0.3)
 		{ //Updating the fps meter every 1/3 of a second
 			lastFPSCheck = glfwGetTime();

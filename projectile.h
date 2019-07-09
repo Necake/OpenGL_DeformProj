@@ -30,31 +30,73 @@ public:
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag")
 	{
 		std::cout << "Successfully constructed projectile\n";
-		std::ofstream vertOutputFile;
-		vertOutputFile.open("vertOutput.txt");
-		optimizeVertices();
+		OptimizeVertices();
 		std::cout << "optimized verts size: " << optimizedVerts.size();
-		vertOutputFile.close();
+
 		//std::cout << projectileMesh.meshes[0].vertices.size();//.vertices.size();
 	}
-
-	void update()
+	//Casts a single ray on a given triangle of a target, given the ray origin (transformed using a model matrix)
+	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model)
 	{
-		speed += acceleration;
+		float hitDistance;
+		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
+		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
+		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
+		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, rayOrigin, glm::normalize(rayDirection), hitDistance);
+		if (rayResult)
+		{
+			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 <<
+				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
+				"\n speed: " << speed.x << speed.y << speed.z << "\n";
+			hitPoints.push_back(std::make_pair((rayOrigin + glm::normalize(rayDirection) * hitDistance), hitDistance));
+
+			return true;
+		}
+		return false;
 	}
 
-	void castRays(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
+	void ProcessRays(Target& target, glm::mat4 model)
 	{
 		
-		for (auto vertex : optimizedVerts)
+		for (auto vertexPos : optimizedVerts)
 		{
-			//for every single vertex in the mesh, render a ray
-			//renderRay(vertex, glm::normalize(acceleration), view, model, projection, rayShader);
-			bool intersect = RayUtil::MTRayCheck(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), vertex, glm::normalize(acceleration), hitDistance);
+			//for every single vertex in the mesh, cast a ray on every triangle of the target
+			for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
+			{
+				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model);
+				if (rayResult)
+					collision = true;
+			}
+		}
+	}
+	//Mesh preprocessing, detects all intersections, bruteforce
+	void ProcessTarget(Target& target, glm::mat4 model)
+	{
+
+		if (collision) //If (at least one) ray has intersected with the target
+		{
+			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target
+			{
+				std::pair<int, float> newVert;
+				newVert.first = i; //take the index of the vertex, and the amount of fore we apply on it 
+				newVert.second = 0;
+				for (int j = 0; j < hitPoints.size(); j++) //for each of the intersected rays
+				{
+					//Distance between given ray and the given vertex
+					glm::vec3 distance = (hitPoints[j].first - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
+					newVert.second += target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
+
+				}
+				if (newVert.second > 1.0f)
+					newVert.second = 1.0f;
+				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
+				if (newVert.second > __EPSILON) //If the vertex is actually affected by the ray in any way, we push it back
+					affectedVertices.push_back(newVert);
+			}
 		}
 	}
 
-	void draw(Shader shader, glm::mat4 view, glm::mat4 model, glm::mat4 projection, glm::vec3 viewPos)
+	void Draw(Shader shader, glm::mat4 view, glm::mat4 model, glm::mat4 projection, glm::vec3 viewPos)
 	{
 		shader.use();
 
@@ -65,10 +107,16 @@ public:
 		projectileMesh.Draw(shader);
 	}
 
+	void Update()
+	{
+		speed += acceleration;
+	}
+
 	Model projectileMesh;
 	glm::vec3 acceleration;
+	glm::vec3 rayDirection;
 private:
-	void optimizeVertices()
+	void OptimizeVertices()
 	{
 		for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
 		{
@@ -82,13 +130,22 @@ private:
 				optimizedVerts.push_back(projectileMesh.meshes[0].vertices[i].Position);
 		}
 	}
+	bool collision = false; //is there going to be a collision? (has any ray hit the target?
 	glm::vec3 speed;
-	float hitDistance;
 	std::vector<glm::vec3> optimizedVerts;
+	std::vector<std::pair<int, float>> affectedVertices;
+	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };
 
+
+
+
+//----------------------------------------------------------------------------------------
 //Projectile that has only one ray
+//----------------------------------------------------------------------------------------
+
+
 class PointProjectile
 {
 public:
@@ -119,7 +176,7 @@ public:
 		return false;
 	}
 
-	void processRays(Target& target, glm::mat4 model)
+	void ProcessRay(Target& target, glm::mat4 model)
 	{
 		//For each triangle in the mesh, do stuff
 		for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
@@ -136,7 +193,7 @@ public:
 		}
 	}
 	//Mesh preprocessing, detects all intersections, bruteforce
-	void processTarget(Target& target, glm::mat4 model)
+	void ProcessTarget(Target& target, glm::mat4 model)
 	{
 
 		if (collision) //If (at least one) ray has intersected with the target
@@ -155,7 +212,7 @@ public:
 	}
 
 	//Dents a single triangle on a given target, and slows down the projectile appropriately
-	void dentTarget(Target& target, float time, glm::mat4 model)
+	void DentTarget(Target& target, float time, glm::mat4 model)
 	{
 		//For each of the affected triangles, get the indices and translade according verts
 		for (int i = 0; i < affectedVertices.size(); i++)
@@ -195,11 +252,11 @@ public:
 				if (!hasProcessed)
 				{
 					hasProcessed = true;
-					processTarget(target, model);
+					ProcessTarget(target, model);
 				}
 				else
 				{
-					dentTarget(target, time, model);
+					DentTarget(target, time, model);
 				}
 			}
 
@@ -220,12 +277,12 @@ public:
 	glm::vec3 projectilePosition; //Position of projectile, also ray origin
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
-	float hitDistance; //todo make private
 	
 private:
 	bool collision = false;
 	bool isColliding = false;
 	bool hasProcessed = false;
+	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile
 	glm::vec3 hitPoint;
 	//Indices of verts affected by rays, along with the % of force acting upon them
