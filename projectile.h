@@ -48,7 +48,15 @@ public:
 			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 <<
 				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
 				"\n speed: " << speed.x << speed.y << speed.z << "\n";
-			hitPoints.push_back(std::make_pair((rayOrigin + glm::normalize(rayDirection) * hitDistance), hitDistance));
+			glm::vec3 newVert = rayOrigin + glm::normalize(rayDirection) * hitDistance;
+			hitPoints.push_back(std::make_pair(newVert, hitDistance));
+
+			if (hitDistance < minHitDistance) //finding the point nearest to the target
+			{
+				minHitDistance = hitDistance; 
+				nearestOrigin = rayOrigin;
+				nearestVert = newVert;
+			}
 
 			return true;
 		}
@@ -72,7 +80,6 @@ public:
 	//Mesh preprocessing, detects all intersections, bruteforce
 	void ProcessTarget(Target& target, glm::mat4 model)
 	{
-
 		if (collision) //If (at least one) ray has intersected with the target
 		{
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target
@@ -107,9 +114,56 @@ public:
 		projectileMesh.Draw(shader);
 	}
 
-	void Update()
+	//Dents a single triangle on a given target, and slows down the projectile appropriately
+	void DentTarget(Target& target, float time, glm::mat4 model)
 	{
-		speed += acceleration;
+		//For each of the affected triangles, get the indices and translade according verts
+		for (int i = 0; i < affectedVertices.size(); i++)
+		{
+			target.targetModel.TranslateVertex(0, affectedVertices[i].first, speed * affectedVertices[i].second);
+			//Update the deformed vertices in the vertex buffer
+			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
+		}
+	}
+
+	void Update(Target& target, float time, glm::mat4 model)
+	{
+		if (collision)
+		{
+			for(int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
+			minHitDistance = glm::length(nearestOrigin - nearestVert);
+			if (minHitDistance < 0.05f)
+			{
+				isColliding = true;
+				acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
+				std::cout << "we hit the mesh\n";
+			}
+			if (isColliding)
+			{
+				if (!hasProcessed)
+				{
+					hasProcessed = true;
+					ProcessTarget(target, model);
+				}
+				else
+				{
+					DentTarget(target, time, model);
+				}
+			}
+
+			//If the speed beomes the opposite direction of the ray, we hammer it at zero,
+			//because we don't want backwards movement
+			if (glm::dot(speed, rayDirection) < __EPSILON)
+			{
+				speed = glm::vec3(0, 0, 0);
+			}
+			else
+			{ //else, we update the speed appropriately
+				speed += acceleration * time;
+			}
+
+		}
 	}
 
 	Model projectileMesh;
@@ -131,7 +185,12 @@ private:
 		}
 	}
 	bool collision = false; //is there going to be a collision? (has any ray hit the target?
+	bool isColliding = false; //is it colliding right now?
+	bool hasProcessed = false; //has the model been processed
 	glm::vec3 speed;
+	float minHitDistance = FLT_MAX; //equivalent to the min distance of vertex to the body
+	glm::vec3 nearestVert; //the position of the nearest vertex
+	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
