@@ -85,6 +85,7 @@ int main()
 	//Geometry and shader setup
 	//------------------------------------------------------------------------------------------------
 	Shader objShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
+	Shader projShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
 	Shader lightShader("../OpenGL_DeformProj/lightVert.vert", "../OpenGL_DeformProj/lightFrag.frag");
 	Shader textShader("../OpenGL_DeformProj/textShader.vert", "../OpenGL_DeformProj/textShader.frag");
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
@@ -235,7 +236,7 @@ int main()
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
 	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.0f));
-	
+	Projectile legitProjectile("../../OpenGLAssets/testModels/triangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
@@ -333,6 +334,8 @@ int main()
 		//Reset the model matrix and render the ray itself
 		model = glm::mat4(1.0f);
 		projectile.RenderInfiniteRay(view, model, projection);
+
+		legitProjectile.Draw(objShader);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);

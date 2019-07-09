@@ -96,7 +96,7 @@ public:
 		}
 	}
 
-	void Draw(Shader shader, glm::mat4 view, glm::mat4 model, glm::mat4 projection, glm::vec3 viewPos)
+	void Draw(Shader shader)
 	{
 		shader.use();
 

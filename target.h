@@ -28,6 +28,11 @@ public:
 	{
 		//this convention is assumed
 		shader.setMat4("model", model);
+
+		shader.setVec3("material.diffuse", targetModel.material.diffuse);
+		shader.setVec3("material.specular", targetModel.material.specular);
+		shader.setFloat("material.shininess", 32.0f);
+
 		targetModel.Draw(shader);
 	}
 
