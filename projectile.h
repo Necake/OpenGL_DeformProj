@@ -26,12 +26,14 @@ class Projectile
 {
 public:
 	Projectile(std::string meshPath, glm::vec3 accel) :
-		projectileMesh(meshPath.c_str(), false), acceleration(accel), 
+		projectileMesh(meshPath.c_str(), true), acceleration(accel), 
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag")
 	{
-		std::cout << "Successfully constructed projectile\n";
+		rayDirection = acceleration;
+		speed = acceleration;
+		std::cout << "Successfully constructed projectile ";
 		OptimizeVertices();
-		std::cout << "optimized verts size: " << optimizedVerts.size();
+		std::cout << "optimized verts size: " << optimizedVerts.size() << "\n";
 
 		//std::cout << projectileMesh.meshes[0].vertices.size();//.vertices.size();
 	}
@@ -42,13 +44,13 @@ public:
 		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
-		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, rayOrigin, glm::normalize(rayDirection), hitDistance);
+		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, this->model * glm::vec4(rayOrigin, 1.0f), glm::normalize(rayDirection), hitDistance);
 		if (rayResult)
 		{
 			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 <<
 				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
 				"\n speed: " << speed.x << speed.y << speed.z << "\n";
-			glm::vec3 newVert = rayOrigin + glm::normalize(rayDirection) * hitDistance;
+			glm::vec3 newVert = glm::vec3(this->model * glm::vec4(rayOrigin, 1.0f)) + glm::normalize(rayDirection) * hitDistance;
 			hitPoints.push_back(std::make_pair(newVert, hitDistance));
 
 			if (hitDistance < minHitDistance) //finding the point nearest to the target
@@ -94,7 +96,7 @@ public:
 					newVert.second += target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
 
 				}
-				if (newVert.second > 1.0f)
+				if (newVert.second > 1.0f) //ovo je raspali zbir, raznese model previse, todo change
 					newVert.second = 1.0f;
 				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
 				if (newVert.second > __EPSILON) //If the vertex is actually affected by the ray in any way, we push it back
@@ -130,8 +132,18 @@ public:
 	{
 		if (collision)
 		{
-			for(int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+			for (int i = 0; i < optimizedVerts.size(); i++)
+			{
+				optimizedVerts[i] += speed; //Change position of all vertices according to current speed
+				std::cout << "updated projectile mesh" << speed.y << "\n";
+			}
+			for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+			{
 				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
+				projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
+				std::cout << "updated projectile mesh" << speed.y << "\n";
+			}
+			nearestOrigin += speed;
 			minHitDistance = glm::length(nearestOrigin - nearestVert);
 			if (minHitDistance < 0.05f)
 			{
@@ -166,7 +178,22 @@ public:
 		}
 	}
 
+	//Renders a ray that has length of acceleration
+	void RenderRays(glm::mat4 view, glm::mat4 projection)
+	{
+		for(int i = 0; i < optimizedVerts.size(); i++)
+			RayUtil::renderRay(optimizedVerts[i], rayDirection, view, model, projection, rayShader);
+	}
+
+	//Renders a ray with infinite length
+	void RenderInfiniteRays(glm::mat4 view, glm::mat4 projection)
+	{
+		for (int i = 0; i < optimizedVerts.size(); i++)
+			RayUtil::renderRay(optimizedVerts[i], rayDirection * 1000000.0f, view, model, projection, rayShader);
+	}
+
 	Model projectileMesh;
+	glm::mat4 model; //the projectile's model matrix
 	glm::vec3 acceleration;
 	glm::vec3 rayDirection;
 private:

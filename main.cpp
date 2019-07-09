@@ -86,6 +86,7 @@ int main()
 	//------------------------------------------------------------------------------------------------
 	Shader objShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
 	Shader projShader("../OpenGL_DeformProj/objVert.vert", "../OpenGL_DeformProj/objFrag_noTex.frag");
+	
 	Shader lightShader("../OpenGL_DeformProj/lightVert.vert", "../OpenGL_DeformProj/lightFrag.frag");
 	Shader textShader("../OpenGL_DeformProj/textShader.vert", "../OpenGL_DeformProj/textShader.frag");
 	Shader skyboxShader("../OpenGL_DeformProj/skybox.vert", "../OpenGL_DeformProj/skybox.frag");
@@ -230,13 +231,16 @@ int main()
 	//------------------------------------------------------------------------------------------------
 	glm::vec3 lightDiffuse = glm::vec3(0.66f, 0.86f, 0.97f);
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
+	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testBoobies.obj", 3.0f, 7.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 7.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
 	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.0f));
 	Projectile legitProjectile("../../OpenGLAssets/testModels/triangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
+	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
+	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
@@ -274,7 +278,11 @@ int main()
 		objShader.setMat4("projection", projection);
 		objShader.setVec3("viewPos", camera.Position);
 		objShader.setFloat("material.shininess", 32.0f); //the only thing left in the material not managed by textures
-
+		projShader.use();
+		projShader.setMat4("view", view);
+		projShader.setMat4("projection", projection);
+		projShader.setVec3("viewPos", camera.Position);
+		projShader.setFloat("material.shininess", 32.0f); //the only thing left in the material not managed by textures
 		//Dynamic light setup
 		//objShader.setSpotLight("flashLight", camera.Position, camera.Front, lightDiffuse, 12.5f, 17.5f);
 
@@ -313,7 +321,7 @@ int main()
 		model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		//model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
-		model = glm::translate(model, glm::vec3(0.1f, 0.2f, 0.1f));
+		model = glm::translate(model, glm::vec3(0.1f, -1.2f, 0.1f));
 		objShader.use();
 		target.model = model;
 		target.Draw(objShader);
@@ -323,19 +331,21 @@ int main()
 		{
 			if (firstPass) //First pass is for setting up the models, all done in 1 frame lol
 			{
-				projectile.ProcessRay(target, model);
-				//projectile.processTarget(target, target.model);
+				legitProjectile.ProcessRays(target, model);
 				std::cout << "Target has been set up.\n";
 				firstPass = false;
 			}
-			projectile.Update(target, deltaTime, target.model);
+			legitProjectile.Update(target, deltaTime, target.model);
 		}
 
 		//Reset the model matrix and render the ray itself
 		model = glm::mat4(1.0f);
 		projectile.RenderInfiniteRay(view, model, projection);
-
-		legitProjectile.Draw(objShader);
+		projShader.use();
+		projShader.setMat4("model", model);
+		legitProjectile.model = model;
+		legitProjectile.Draw(projShader);
+		legitProjectile.RenderInfiniteRays(view, projection);
 
 		//Rendering text
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
