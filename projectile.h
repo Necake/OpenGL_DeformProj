@@ -77,7 +77,7 @@ public:
 
 	void ProcessRays(Target& target, glm::mat4 model)
 	{
-		
+		//cast rays from projectile onto target
 		for (auto vertexPos : optimizedVerts)
 		{
 			//for every single vertex in the mesh, cast a ray on every triangle of the target
@@ -86,6 +86,18 @@ public:
 				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model);
 				if (rayResult)
 					collision = true;
+			}
+		}
+		//cast rays from target onto projectile (inverse)
+		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
+		{
+			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j += 3)
+			{
+				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model);
+				if (rayResult)
+				{
+					cout << "inverse ray hit!\n";
+				}
 			}
 		}
 	}
@@ -119,7 +131,7 @@ public:
 					newVert.second += target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
 
 				}
-				newVert.second = newVert.second * 0.5f; //todo delete
+				//newVert.second = newVert.second * 0.5f; //todo delete
 				if (newVert.second > 1.0f) //ovo je raspali zbir, raznese model previse, todo change
 					newVert.second = 1.0f;
 				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";

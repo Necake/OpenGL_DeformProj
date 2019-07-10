@@ -233,12 +233,12 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 7.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 7.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
 	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
-	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileTriangle.obj", glm::vec3(0.005f, -0.03f, 0.0f));
+	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileTriangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
 	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
 	//Fps counter constants
@@ -340,7 +340,7 @@ int main()
 
 		//Reset the model matrix and render the ray itself
 		model = glm::mat4(1.0f);
-		projectile.RenderInfiniteRay(view, model, projection);
+		//projectile.RenderInfiniteRay(view, model, projection);
 		projShader.use();
 		projShader.setMat4("model", model);
 		legitProjectile.model = model;
