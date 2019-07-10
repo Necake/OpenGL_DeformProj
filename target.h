@@ -56,7 +56,7 @@ public:
 		targetModel.Draw(shader);
 	}
 
-	//Calculates ray falloff given the material parameters, returns intensity in % of original force
+	//Calculates ray falloff given the material parameters, returns intensity in % of original force, or direct 0 if greater than falloff
 	float falloffFunc(float input)
 	{
 		//std::cout << "registered falloff with: " << input << " ";

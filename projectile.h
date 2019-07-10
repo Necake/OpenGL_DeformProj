@@ -158,6 +158,7 @@ public:
 				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
 				projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
 			}
+			
 			//Update distances to impact on vertices
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
@@ -166,10 +167,20 @@ public:
 					target.vertInfo[i].hitDistance -= glm::length(speed);
 					if (target.vertInfo[i].hitDistance < __EPSILON)
 					{
+						//the given vertex is colliding
 						target.vertInfo[i].isColliding = true;
 						acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
-						//std::cout << "we hit the mesh\n";
 
+						// calculate the falloff around the collided vertex
+						for (int j = 0; j < target.targetModel.meshes[0].vertices.size(); j++)
+						{
+							float falloff = target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[i].Position - target.targetModel.meshes[0].vertices[j].Position));
+							if (falloff > target.vertInfo[j].hitIntensity)
+							{
+								target.vertInfo[j].hitIntensity = falloff;
+								target.vertInfo[j].isColliding = true;
+							}
+						}
 					}
 				}
 			}
@@ -185,6 +196,7 @@ public:
 			if (glm::dot(speed, rayDirection) < __EPSILON)
 			{
 				speed = glm::vec3(0, 0, 0);
+				isDone = true;
 			}
 			else
 			{ //else, we update the speed appropriately
@@ -212,6 +224,7 @@ public:
 	glm::mat4 model; //the projectile's model matrix
 	glm::vec3 acceleration;
 	glm::vec3 rayDirection;
+	bool isDone = false; //is the sim over?
 private:
 	void OptimizeVertices()
 	{

@@ -233,7 +233,7 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testBoobies2.obj", 3.0f, 3.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testPlaneHiRes.obj", 3.0f, 3.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
@@ -336,7 +336,8 @@ int main()
 				std::cout << "Target has been set up.\n";
 				firstPass = false;
 			}
-			legitProjectile.Update(target, 0.0167f, target.model);
+			if(!legitProjectile.isDone)
+				legitProjectile.Update(target, 0.0167f, target.model);
 		}
 
 		//Reset the model matrix and render the ray itself
