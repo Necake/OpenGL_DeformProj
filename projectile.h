@@ -44,25 +44,7 @@ public:
 		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
-		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, this->model * glm::vec4(rayOrigin, 1.0f), glm::normalize(rayDirection), hitDistance);
-		if (rayResult)
-		{
-			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 <<
-				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
-				"\n speed: " << speed.x << speed.y << speed.z << "\n";
-			glm::vec3 newVert = glm::vec3(this->model * glm::vec4(rayOrigin, 1.0f)) + glm::normalize(rayDirection) * hitDistance;
-			hitPoints.push_back(std::make_pair(newVert, hitDistance));
-
-			if (hitDistance < minHitDistance) //finding the point nearest to the target
-			{
-				minHitDistance = hitDistance;
-				nearestOrigin = rayOrigin;
-				nearestVert = newVert;
-			}
-
-			return true;
-		}
-		return false;
+		return RayUtil::MTRayCheck(vert0, vert1, vert2, this->model * glm::vec4(rayOrigin, 1.0f), glm::normalize(rayDirection), hitDistance);
 	}
 
 	bool CastInverseRay(int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model, float& hitDistance)
@@ -153,18 +135,6 @@ public:
 		projectileMesh.Draw(shader);
 	}
 
-	//Dents a single triangle on a given target, and slows down the projectile appropriately
-	void DentTarget(Target& target, float time, glm::mat4 model)
-	{
-		//For each of the affected triangles, get the indices and translade according verts
-		for (int i = 0; i < affectedVertices.size(); i++)
-		{
-			target.targetModel.TranslateVertex(0, affectedVertices[i].first, speed * affectedVertices[i].second);
-			//Update the deformed vertices in the vertex buffer
-			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
-		}
-	}
-
 	void DentVertexDirect(Target& target, int index, glm::mat4 model)
 	{
 		target.targetModel.TranslateVertex(0, index, speed);
@@ -200,20 +170,6 @@ public:
 					}
 				}
 			}
-			/*
-			if (isColliding)
-			{
-				if (!hasProcessed)
-				{
-					hasProcessed = true;
-					ProcessTarget(target, model);
-				}
-				else
-				{
-					DentTarget(target, time, model);
-				}
-			}*/
-
 
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
