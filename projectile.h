@@ -72,6 +72,7 @@ public:
 					{
 						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].isInitialized = true;
 						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].hitDistance = hitDistance;
+						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].hitIntensity = 1.0f;
 					}
 				}
 			}
@@ -90,6 +91,8 @@ public:
 					{
 						target.targetModel.meshes[0].vertices[i].isInitialized = true;
 						target.targetModel.meshes[0].vertices[i].hitDistance = hitDistance;
+						target.targetModel.meshes[0].vertices[i].hitIntensity = 1.0f;
+						collision = true;
 					}
 					//std::cout << hitDistance << "\n"; todo delete
 				}
@@ -102,24 +105,24 @@ public:
 	{
 		if (collision) //If (at least one) ray has intersected with the target
 		{
-			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target
+			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				std::pair<int, float> newVert;
-				newVert.first = i; //take the index of the vertex, and the amount of fore we apply on it 
-				newVert.second = 0;
-				for (int j = 0; j < hitPoints.size(); j++) //for each of the intersected rays
+				if (!target.targetModel.meshes[0].vertices[i].isInitialized)
 				{
-					//Distance between given ray and the given vertex
-					glm::vec3 distance = (hitPoints[j].first - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
-					newVert.second += target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
+					float maxIntensity = 0.0f;
+					for (int j = 0; j < target.targetModel.meshes[0].vertices.size(); j++)
+					{
+						float dist = glm::length(target.targetModel.meshes[0].vertices[i].Position - target.targetModel.meshes[0].vertices[j].Position);
+						float currIntensity = target.falloffFunc(dist);
+						if ((dist < target.falloff) && (target.targetModel.meshes[0].vertices[j].isInitialized) && currIntensity > maxIntensity)
+						{
+							maxIntensity = currIntensity;
+							target.targetModel.meshes[0].vertices[i].isColliding = true;
+						}
+					}
 
+					target.targetModel.meshes[0].vertices[i].hitIntensity = maxIntensity;
 				}
-				//newVert.second = newVert.second * 0.5f; //todo delete
-				if (newVert.second > 1.0f) //ovo je raspali zbir, raznese model previse, todo change
-					newVert.second = 1.0f;
-				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
-				if (newVert.second > __EPSILON) //If the vertex is actually affected by the ray in any way, we push it back
-					affectedVertices.push_back(newVert);
 			}
 		}
 	}
@@ -137,7 +140,7 @@ public:
 
 	void DentVertexDirect(Target& target, int index, glm::mat4 model)
 	{
-		target.targetModel.TranslateVertex(0, index, speed);
+		target.targetModel.TranslateVertex(0, index, speed * target.targetModel.meshes[0].vertices[index].hitIntensity);
 		//Update the deformed vertices in the vertex buffer
 		target.targetModel.meshes[0].UpdateBufferVertexDirect(index);
 	}

@@ -36,6 +36,8 @@ struct Vertex {
 	bool isInitialized = false;
 	//is the current vertex colliding?
 	bool isColliding = false;
+	//the force multiplier
+	float hitIntensity;
 };
 
 struct Texture {

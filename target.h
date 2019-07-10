@@ -52,6 +52,7 @@ public:
 	Model targetModel;
 	glm::mat4 model;
 	std::vector<glm::vec3> optimizedVerts;
+	float falloff;
 private:
 	void OptimizeVertices()
 	{
@@ -67,8 +68,6 @@ private:
 				optimizedVerts.push_back(targetModel.meshes[0].vertices[i].Position);
 		}
 	}
-
-	float falloff;
 	float roughness;
 	float threshold;
 };

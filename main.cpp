@@ -233,7 +233,7 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 7.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 3.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
@@ -332,10 +332,11 @@ int main()
 			if (firstPass) //First pass is for setting up the models, all done in 1 frame lol
 			{
 				legitProjectile.ProcessRays(target, model);
+				//legitProjectile.ProcessTarget(target, model);
 				std::cout << "Target has been set up.\n";
 				firstPass = false;
 			}
-			legitProjectile.Update(target, deltaTime, target.model);
+			legitProjectile.Update(target, 0.0167f, target.model);
 		}
 
 		//Reset the model matrix and render the ray itself
