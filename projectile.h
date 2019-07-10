@@ -86,7 +86,11 @@ public:
 				if (rayResult)
 				{
 					collision = true;
-					directAffectedVertices.push_back(std::make_pair(target.targetModel.meshes[0].indices[i], hitDistance));
+					if (!target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].isInitialized)
+					{
+						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].isInitialized = true;
+						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].hitDistance = hitDistance;
+					}
 				}
 			}
 		}
@@ -99,8 +103,13 @@ public:
 				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model, hitDistance);
 				if (rayResult)
 				{
-					cout << "inverse ray hit!\n";
-					directAffectedVertices.push_back(std::make_pair(i, hitDistance));
+					std::cout << "inverse ray hit!\t"; 
+					if (!target.targetModel.meshes[0].vertices[i].isInitialized)
+					{
+						target.targetModel.meshes[0].vertices[i].isInitialized = true;
+						target.targetModel.meshes[0].vertices[i].hitDistance = hitDistance;
+					}
+					std::cout << hitDistance << "\n";
 				}
 			}
 		}
@@ -200,9 +209,10 @@ public:
 
 			acceleration = -rayDirection;
 
-			for (int i = 0; i < directAffectedVertices.size(); i++)
+			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				DentVertexDirect(target, directAffectedVertices[i].first, model);
+				if(target.targetModel.meshes[0].vertices[i].isInitialized)
+					DentVertexDirect(target, i, model);
 			}
 
 			//If the speed beomes the opposite direction of the ray, we hammer it at zero,
@@ -261,7 +271,6 @@ private:
 	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
-	std::vector<std::pair<int, float>> directAffectedVertices; //keeps vbo indices and hitDistances
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };

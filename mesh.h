@@ -30,6 +30,10 @@ struct Vertex {
 	glm::vec3 Tangent;
 	// bitangent
 	glm::vec3 Bitangent;
+	//ray distance from the other object
+	float hitDistance;
+	//is the vertex calculated?
+	bool isInitialized = false;
 };
 
 struct Texture {

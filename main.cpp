@@ -238,7 +238,7 @@ int main()
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
 	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
-	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileTriangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
+	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.03f, 0.0f));
 	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
 	//Fps counter constants
