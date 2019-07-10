@@ -84,7 +84,10 @@ public:
 				float hitDistance = 0.0f;
 				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model, hitDistance);
 				if (rayResult)
+				{
 					collision = true;
+					directAffectedVertices.push_back(std::make_pair(target.targetModel.meshes[0].indices[i], hitDistance));
+				}
 			}
 		}
 		//cast rays from target onto projectile (inverse)
@@ -97,6 +100,7 @@ public:
 				if (rayResult)
 				{
 					cout << "inverse ray hit!\n";
+					directAffectedVertices.push_back(std::make_pair(i, hitDistance));
 				}
 			}
 		}
@@ -152,10 +156,18 @@ public:
 		}
 	}
 
+	void DentVertexDirect(Target& target, int index, glm::mat4 model)
+	{
+		target.targetModel.TranslateVertex(0, index, speed);
+		//Update the deformed vertices in the vertex buffer
+		target.targetModel.meshes[0].UpdateBufferVertexDirect(index);
+	}
+
 	void Update(Target& target, float time, glm::mat4 model)
 	{
 		if (collision)
 		{
+			/*
 			for (int i = 0; i < optimizedVerts.size(); i++)
 			{
 				optimizedVerts[i] += speed; //Change position of all vertices according to current speed
@@ -184,6 +196,13 @@ public:
 				{
 					DentTarget(target, time, model);
 				}
+			}*/
+
+			acceleration = -rayDirection;
+
+			for (int i = 0; i < directAffectedVertices.size(); i++)
+			{
+				DentVertexDirect(target, directAffectedVertices[i].first, model);
 			}
 
 			//If the speed beomes the opposite direction of the ray, we hammer it at zero,
@@ -242,7 +261,7 @@ private:
 	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
-	std::vector<std::pair<int, float>> directAffectedVertices;
+	std::vector<std::pair<int, float>> directAffectedVertices; //keeps vbo indices and hitDistances
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };
