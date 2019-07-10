@@ -103,13 +103,13 @@ public:
 				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model, hitDistance);
 				if (rayResult)
 				{
-					std::cout << "inverse ray hit!\t"; 
+					//std::cout << "inverse ray hit!\t"; todo delete
 					if (!target.targetModel.meshes[0].vertices[i].isInitialized)
 					{
 						target.targetModel.meshes[0].vertices[i].isInitialized = true;
 						target.targetModel.meshes[0].vertices[i].hitDistance = hitDistance;
 					}
-					std::cout << hitDistance << "\n";
+					//std::cout << hitDistance << "\n"; todo delete
 				}
 			}
 		}
@@ -176,24 +176,31 @@ public:
 	{
 		if (collision)
 		{
-			/*
 			for (int i = 0; i < optimizedVerts.size(); i++)
 			{
-				optimizedVerts[i] += speed; //Change position of all vertices according to current speed
+				optimizedVerts[i] += speed; //Change position of all ray origins according to current speed
 			}
 			for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
 			{
 				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
 				projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
 			}
-			nearestOrigin += speed;
-			minHitDistance = glm::length(nearestOrigin - nearestVert);
-			if (minHitDistance < 0.05f)
+			//Update distances to impact on vertices
+			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				isColliding = true;
-				acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
-				std::cout << "we hit the mesh\n";
+				if (target.targetModel.meshes[0].vertices[i].isInitialized)
+				{
+					target.targetModel.meshes[0].vertices[i].hitDistance -= glm::length(speed);
+					if (target.targetModel.meshes[0].vertices[i].hitDistance < __EPSILON)
+					{
+						target.targetModel.meshes[0].vertices[i].isColliding = true;
+						acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
+						//std::cout << "we hit the mesh\n";
+
+					}
+				}
 			}
+			/*
 			if (isColliding)
 			{
 				if (!hasProcessed)
@@ -207,11 +214,10 @@ public:
 				}
 			}*/
 
-			acceleration = -rayDirection;
 
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				if(target.targetModel.meshes[0].vertices[i].isInitialized)
+				if(target.targetModel.meshes[0].vertices[i].isColliding)
 					DentVertexDirect(target, i, model);
 			}
 

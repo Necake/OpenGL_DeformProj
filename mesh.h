@@ -34,6 +34,8 @@ struct Vertex {
 	float hitDistance;
 	//is the vertex calculated?
 	bool isInitialized = false;
+	//is the current vertex colliding?
+	bool isColliding = false;
 };
 
 struct Texture {
