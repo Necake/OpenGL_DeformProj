@@ -68,11 +68,11 @@ public:
 				if (rayResult)
 				{
 					collision = true;
-					if (!target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].isInitialized)
+					if (!target.vertInfo[target.targetModel.meshes[0].indices[i]].isInitialized)
 					{
-						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].isInitialized = true;
-						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].hitDistance = hitDistance;
-						target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[i]].hitIntensity = 1.0f;
+						target.vertInfo[target.targetModel.meshes[0].indices[i]].isInitialized = true;
+						target.vertInfo[target.targetModel.meshes[0].indices[i]].hitDistance = hitDistance;
+						target.vertInfo[target.targetModel.meshes[0].indices[i]].hitIntensity = 1.0f;
 					}
 				}
 			}
@@ -87,11 +87,11 @@ public:
 				if (rayResult)
 				{
 					//std::cout << "inverse ray hit!\t"; todo delete
-					if (!target.targetModel.meshes[0].vertices[i].isInitialized)
+					if (!target.vertInfo[i].isInitialized)
 					{
-						target.targetModel.meshes[0].vertices[i].isInitialized = true;
-						target.targetModel.meshes[0].vertices[i].hitDistance = hitDistance;
-						target.targetModel.meshes[0].vertices[i].hitIntensity = 1.0f;
+						target.vertInfo[i].isInitialized = true;
+						target.vertInfo[i].hitDistance = hitDistance;
+						target.vertInfo[i].hitIntensity = 1.0f;
 						collision = true;
 					}
 					//std::cout << hitDistance << "\n"; todo delete
@@ -107,21 +107,21 @@ public:
 		{
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				if (!target.targetModel.meshes[0].vertices[i].isInitialized)
+				if (!target.vertInfo[i].isInitialized)
 				{
 					float maxIntensity = 0.0f;
 					for (int j = 0; j < target.targetModel.meshes[0].vertices.size(); j++)
 					{
 						float dist = glm::length(target.targetModel.meshes[0].vertices[i].Position - target.targetModel.meshes[0].vertices[j].Position);
 						float currIntensity = target.falloffFunc(dist);
-						if ((dist < target.falloff) && (target.targetModel.meshes[0].vertices[j].isInitialized) && currIntensity > maxIntensity)
+						if ((dist < target.falloff) && (target.vertInfo[j].isInitialized) && currIntensity > maxIntensity)
 						{
 							maxIntensity = currIntensity;
-							target.targetModel.meshes[0].vertices[i].isColliding = true;
+							target.vertInfo[i].isColliding = true;
 						}
 					}
 
-					target.targetModel.meshes[0].vertices[i].hitIntensity = maxIntensity;
+					target.vertInfo[i].hitIntensity = maxIntensity;
 				}
 			}
 		}
@@ -140,7 +140,7 @@ public:
 
 	void DentVertexDirect(Target& target, int index, glm::mat4 model)
 	{
-		target.targetModel.TranslateVertex(0, index, speed * target.targetModel.meshes[0].vertices[index].hitIntensity);
+		target.targetModel.TranslateVertex(0, index, speed * target.vertInfo[index].hitIntensity);
 		//Update the deformed vertices in the vertex buffer
 		target.targetModel.meshes[0].UpdateBufferVertexDirect(index);
 	}
@@ -161,12 +161,12 @@ public:
 			//Update distances to impact on vertices
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				if (target.targetModel.meshes[0].vertices[i].isInitialized)
+				if (target.vertInfo[i].isInitialized)
 				{
-					target.targetModel.meshes[0].vertices[i].hitDistance -= glm::length(speed);
-					if (target.targetModel.meshes[0].vertices[i].hitDistance < __EPSILON)
+					target.vertInfo[i].hitDistance -= glm::length(speed);
+					if (target.vertInfo[i].hitDistance < __EPSILON)
 					{
-						target.targetModel.meshes[0].vertices[i].isColliding = true;
+						target.vertInfo[i].isColliding = true;
 						acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
 						//std::cout << "we hit the mesh\n";
 
@@ -176,7 +176,7 @@ public:
 
 			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 			{
-				if(target.targetModel.meshes[0].vertices[i].isColliding)
+				if(target.vertInfo[i].isColliding)
 					DentVertexDirect(target, i, model);
 			}
 

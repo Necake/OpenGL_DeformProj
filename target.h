@@ -15,15 +15,33 @@
 #include "model.h"
 #include "rayUtil.h"
 
+
+struct VertInfo
+{
+	//ray distance from the other object
+	float hitDistance = 0.0f;
+	//is the vertex calculated?
+	bool isInitialized = false;
+	//is the current vertex colliding?
+	bool isColliding = false;
+	//the force multiplier
+	float hitIntensity = 0.0f;
+};
+
 class Target
 {
 public:
 	Target(const char* modelPath, float falloff, float roughness, float threshold):
 		targetModel(modelPath, true), falloff(falloff), roughness(roughness), threshold(threshold)
 	{
+		VertInfo vi;
+		std::vector<VertInfo> vInfo(targetModel.meshes[0].vertices.size(), vi);
+		vertInfo = vInfo;
+
 		model = glm::mat4(1.0f);
-		std::cout << "Successfully set up target\n";
+		std::cout << "Loaded model info, setting up vertices...\n";
 		OptimizeVertices();
+		std::cout << "Successfully set up target\n";
 	}
 
 	void Draw(Shader& shader)
@@ -52,6 +70,7 @@ public:
 	Model targetModel;
 	glm::mat4 model;
 	std::vector<glm::vec3> optimizedVerts;
+	std::vector<VertInfo> vertInfo;
 	float falloff;
 private:
 	void OptimizeVertices()
@@ -66,6 +85,12 @@ private:
 			}
 			if (!found)
 				optimizedVerts.push_back(targetModel.meshes[0].vertices[i].Position);
+			if (!(i % 250))
+			{
+				system("CLS");
+				std::cout << "optimizing: " << float(i) * 100.0f / targetModel.meshes[0].vertices.size() << "%\n";
+
+			}
 		}
 	}
 	float roughness;

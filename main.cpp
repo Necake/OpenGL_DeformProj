@@ -233,7 +233,7 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 3.0f, 1);
+	Target target("../../OpenGLAssets/testModels/testBoobies2.obj", 3.0f, 3.0f, 1);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
@@ -321,7 +321,7 @@ int main()
 		model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		//model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
-		model = glm::translate(model, glm::vec3(0.5f, -1.2f, 0.2f));
+		model = glm::translate(model, glm::vec3(0.5f, -3.2f, 0.2f));
 		objShader.use();
 		target.model = model;
 		target.Draw(objShader);
