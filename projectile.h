@@ -39,9 +39,8 @@ public:
 	}
 
 	//Casts a single ray on a given triangle of a target, given the ray origin (transformed using a model matrix)
-	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model)
+	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model, float& hitDistance)
 	{
-		float hitDistance;
 		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
@@ -66,9 +65,8 @@ public:
 		return false;
 	}
 
-	bool CastInverseRay(int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model)
+	bool CastInverseRay(int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model, float& hitDistance)
 	{
-		float hitDistance;
 		glm::vec3 vert0 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv1]].Position, 1.0f));
 		glm::vec3 vert2 = (this->model * glm::vec4(projectileMesh.meshes[0].vertices[projectileMesh.meshes[0].indices[indexv2]].Position, 1.0f));
@@ -83,7 +81,8 @@ public:
 			//for every single vertex in the mesh, cast a ray on every triangle of the target
 			for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
 			{
-				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model);
+				float hitDistance = 0.0f;
+				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model, hitDistance);
 				if (rayResult)
 					collision = true;
 			}
@@ -93,23 +92,12 @@ public:
 		{
 			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j += 3)
 			{
-				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model);
+				float hitDistance = 0.0f;
+				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model, hitDistance);
 				if (rayResult)
 				{
 					cout << "inverse ray hit!\n";
 				}
-			}
-		}
-	}
-
-	void ProcessInverseRays(Target& target, glm::mat4 model)
-	{
-		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
-		{
-			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j+=3)
-			{
-				bool invRayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model);
-
 			}
 		}
 	}
@@ -254,6 +242,7 @@ private:
 	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
+	std::vector<std::pair<int, float>> directAffectedVertices;
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };
