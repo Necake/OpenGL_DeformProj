@@ -1,9 +1,16 @@
+#ifndef OCTREE_H
+#define OCTREE_H
+
+#include<vector>
+#include<iostream>
+
+
 class vec3
 {
 public:
-	vec3(float x, float y, float z): x(x), y(y), z(z)
+	vec3(float x, float y, float z) : x(x), y(y), z(z)
 	{
-		
+
 	}
 	vec3()
 	{
@@ -70,164 +77,79 @@ public:
 private:
 };
 
-bool operator==(const vec3& lhs, const vec3& rhs)
+struct Vertex
+{
+	vec3 position;
+	vec3 normal;
+};
+
+
+bool operator==(const vec3 & lhs, const vec3 & rhs)
 {
 	if (lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z)
 		return true;
 	return false;
 }
 
-
-struct Node
-{
-	int data;
-	Node* left;
-	Node* right;
-};
-
 struct OctreeNode
 {
-	OctreeNode()
+
+	OctreeNode(float size, vec3 position)
 	{
-		data = vec3(0, 0, 0);
+		this->position = position;
+		this->size = size;
 	}
-	vec3 data;
-	OctreeNode* XpYpZp;
-	OctreeNode* XpYpZn;
-	OctreeNode* XpYnZp;
-	OctreeNode* XpYnZn;
-	OctreeNode* XnYpZp;
-	OctreeNode* XnYpZn;
-	OctreeNode* XnYnZp;
-	OctreeNode* XnYnZn;
+
+	OctreeNode* XpYpZp = NULL;
+	OctreeNode* XpYpZn = NULL;
+	OctreeNode* XpYnZp = NULL;
+	OctreeNode* XpYnZn = NULL;
+	OctreeNode* XnYpZp = NULL;
+	OctreeNode* XnYpZn = NULL;
+	OctreeNode* XnYnZp = NULL;
+	OctreeNode* XnYnZn = NULL;
+
+	std::vector<Vertex>* data = NULL;
+	vec3 position;
+	float size;
 };
 
-class bTree
+OctreeNode* newOctreeNode(float size, vec3 position)
 {
-public:
-	bTree()
-	{
-		root = nullptr;
-	}
-	~bTree()
-	{
-		DestroyTree();
-	}
-
-	void Insert(int data)
-	{
-		if (root != nullptr)
-			Insert(data, root);
-		else
-		{
-			root = new Node;
-			root->data = data;
-			root->left = nullptr;
-			root->right = nullptr;
-		}
-	}
-	Node* Search(int data)
-	{
-		return Search(data, root);
-	}
-	void DestroyTree()
-	{
-		DestroyTree(root);
-	}
-
-	Node* root;
-private:
-	void DestroyTree(Node* leaf)
-	{
-		if (leaf != nullptr)
-		{
-			DestroyTree(leaf->left);
-			DestroyTree(leaf->right);
-			delete leaf;
-		}
-	}
-
-	void Insert(int data, Node* leaf)
-	{
-		if (data < leaf->data)
-		{
-			if(leaf->left != nullptr)
-				Insert(data, leaf->left);
-			else
-			{
-				leaf->left = new Node;
-				leaf->left->data = data;
-				leaf->left->left = nullptr;
-				leaf->left->right = nullptr;
-			}
-
-		}
-		else if (data >= leaf->data)
-		{
-			if (leaf->right != nullptr)
-				Insert(data, leaf->left);
-			else
-			{
-				leaf->right = new Node;
-				leaf->right->data = data;
-				leaf->right->left = nullptr;
-				leaf->right->right = nullptr;
-			}
-		}
-			
-	}
-	Node* Search(int data, Node* leaf)
-	{
-		if (leaf != nullptr)
-		{
-			if (data == leaf->data)
-				return leaf;
-			if (data < leaf->data)
-				return Search(data, leaf->left);
-			else
-				return Search(data, leaf->right);
-		}
-		else
-			return nullptr;
-	}
-};
-
-OctreeNode* newOctreeNode(vec3 data)
-{
-	OctreeNode* newNode = new OctreeNode();
-	newNode->data = data;
-	newNode ->XpYpZp = nullptr;
-	newNode ->XpYpZn = nullptr;
-	newNode ->XpYnZp = nullptr;
-	newNode ->XpYnZn = nullptr;
-	newNode ->XnYpZp = nullptr;
-	newNode ->XnYpZn = nullptr;
-	newNode ->XnYnZp = nullptr;
-	newNode ->XnYnZn = nullptr;
+	OctreeNode* newNode = new OctreeNode(size, position);
+	newNode->data = nullptr;
 	return newNode;
 }
 
-class Octree 
+class Octree
 {
 public:
-	Octree()
+	Octree(float minSize, int maxVerts, int depth, float initSize, vec3 initPos)
 	{
-		root = nullptr;
+		this->minSize = minSize;
+		this->maxVerts = maxVerts;
+		this->depth = depth;
+		this->size = initSize;
+		root = newOctreeNode(size, initPos);//new OctreeNode(size, initPos); //init cvor
+		InitSubdivide(root, this->depth);
+
 	}
 	~Octree()
 	{
 		DestroyTree();
 	}
 
-	void Insert(vec3 data)
+	void Insert(std::vector<vec3> dataArray)
 	{
-		if (root != nullptr)
-			Insert(data, root);
+		if (root != NULL)
+			Insert(dataArray, root);
 		else
 		{
-			root = newOctreeNode(data);
+			std::cout << "if i got here, you fucked something up??\n";
+			//root = newOctreeNode(data);
 		}
 	}
+
 	OctreeNode* Search(vec3 data)
 	{
 		return Search(data, root);
@@ -238,10 +160,14 @@ public:
 	}
 
 	OctreeNode* root;
+	float minSize; //the most subdivisions allowed
+	float size; //size of the space
+	int maxVerts; //the most vertices allowed in a octant
+	int depth; //initial depth
 private:
 	void DestroyTree(OctreeNode* leaf)
 	{
-		if (leaf != nullptr)
+		if (leaf->XpYpZp != nullptr) //checking the first child is enough, since all will exist, or none will exist
 		{
 			DestroyTree(leaf->XpYpZp);
 			DestroyTree(leaf->XpYpZn);
@@ -255,107 +181,150 @@ private:
 		}
 	}
 
-	void Insert(vec3 data, OctreeNode* leaf)
+	void InitEmptyChildren(OctreeNode* node)
 	{
-		if (data.isXpYpZp(leaf->data))
+
+		float newSize = node->size / 2.0f;
+		node->XpYpZp = newOctreeNode(newSize,
+			vec3(node->position.x + newSize, node->position.y + newSize, node->position.z + newSize));
+		node->XpYpZn = newOctreeNode(newSize,
+			vec3(node->position.x + newSize, node->position.y + newSize, node->position.z - newSize));
+
+		node->XpYnZp = newOctreeNode(newSize,
+			vec3(node->position.x + newSize, node->position.y - newSize, node->position.z + newSize));
+		node->XpYnZn = newOctreeNode(newSize,
+			vec3(node->position.x + newSize, node->position.y - newSize, node->position.z - newSize));
+
+		node->XnYpZp = newOctreeNode(newSize,
+			vec3(node->position.x - newSize, node->position.y + newSize, node->position.z + newSize));
+		node->XnYpZn = newOctreeNode(newSize,
+			vec3(node->position.x - newSize, node->position.y + newSize, node->position.z - newSize));
+
+		node->XnYnZp = newOctreeNode(newSize,
+			vec3(node->position.x - newSize, node->position.y - newSize, node->position.z + newSize));
+		node->XnYnZn = newOctreeNode(newSize,
+			vec3(node->position.x - newSize, node->position.y - newSize, node->position.z - newSize));
+	}
+
+	void InitSubdivide(OctreeNode * node, int depth) //granam svaki cvor do dubine n
+	{
+		//dati cvor je inicijalizovan, ja mu pravim decu
+		if (depth > 0) //create n depth layers of the tree initially
 		{
-			if (leaf->XpYpZp != nullptr)
-				Insert(data, leaf->XpYpZp);
-			else
+			//init children
+			InitEmptyChildren(node);
+			InitSubdivide(node->XpYpZp, depth - 1);
+			InitSubdivide(node->XpYpZn, depth - 1);
+			InitSubdivide(node->XpYnZp, depth - 1);
+			InitSubdivide(node->XpYnZn, depth - 1);
+			InitSubdivide(node->XnYpZp, depth - 1);
+			InitSubdivide(node->XnYpZn, depth - 1);
+			InitSubdivide(node->XnYnZp, depth - 1);
+			InitSubdivide(node->XnYnZn, depth - 1);
+		}
+		else
+		{
+			std::cout << "leef\n";
+		}
+
+	}
+
+	void Insert(std::vector<vec3> dataArray, OctreeNode * node)
+	{
+		if ((dataArray.size() < maxVerts) || (node->size / 2.0f < minSize))
+		{
+			//exit recursion tree lol
+			//std::cout << "im at last recursion step";
+			if (dataArray.size() > 0)
 			{
-				leaf->XpYpZp = newOctreeNode(data);
+				node->data = new std::vector<Vertex>();
+				//std::cout << ", condition met\n";
+				for (auto pos : dataArray)
+				{
+					Vertex vert;
+					vert.position = pos;
+					std::cout << "pushing back vertex... ";
+					node->data->push_back(vert);
+					std::cout << "done!\n";
+				}
+				std::cout << "pushed back data of " << dataArray.size() << " verts into node sized " << node->size << "\n";
+
+			}
+		}
+		else
+		{
+			std::vector<vec3> splits[8];
+			for (auto pos : dataArray)
+			{
+				if (pos.isXpYpZp(node->position))
+					splits[0].push_back(pos);
+				else if (pos.isXpYpZn(node->position))
+					splits[1].push_back(pos);
+				else if (pos.isXpYnZp(node->position))
+					splits[2].push_back(pos);
+				else if (pos.isXpYnZn(node->position))
+					splits[3].push_back(pos);
+				else if (pos.isXnYpZp(node->position))
+					splits[4].push_back(pos);
+				else if (pos.isXnYpZn(node->position))
+					splits[5].push_back(pos);
+				else if (pos.isXnYnZp(node->position))
+					splits[6].push_back(pos);
+				else if (pos.isXnYnZn(node->position))
+					splits[7].push_back(pos);
 			}
 
-		}
-		else if (data.isXpYpZn(leaf->data))
-		{
-			if (leaf->XpYpZn != nullptr)
-				Insert(data, leaf->XpYpZn);
-			else
-			{
-				leaf->XpYpZn = newOctreeNode(data);
-			}
-		}
-		else if (data.isXpYnZp(leaf->data))
-		{
-			if (leaf->XpYnZp != nullptr)
-				Insert(data, leaf->XpYnZp);
-			else
-			{
-				leaf->XpYnZp = newOctreeNode(data);
-			}
-		}
-		else if (data.isXpYnZn(leaf->data))
-		{
-			if (leaf->XpYnZn != nullptr)
-				Insert(data, leaf->XpYnZn);
-			else
-			{
-				leaf->XpYnZn = newOctreeNode(data);
-			}
-		}
-		else if (data.isXnYpZp(leaf->data))
-		{
-			if (leaf->XnYpZp != nullptr)
-				Insert(data, leaf->XnYpZp);
-			else
-			{
-				leaf->XnYpZp = newOctreeNode(data);
-			}
+			if (node->XpYpZp == NULL) //if it's a leaf, but none of the conditions have been met
+				InitEmptyChildren(node); //wasteful, todo fix
 
-		}
-		else if (data.isXnYpZn(leaf->data))
-		{
-			if (leaf->XnYpZn != nullptr)
-				Insert(data, leaf->XnYpZn);
-			else
-			{
-				leaf->XnYpZn = newOctreeNode(data);
-			}
-		}
-		else if (data.isXnYnZp(leaf->data))
-		{
-			if (leaf->XnYnZp != nullptr)
-				Insert(data, leaf->XnYnZp);
-			else
-			{
-				leaf->XnYnZp = newOctreeNode(data);
-			}
-		}
-		else if (data.isXnYnZn(leaf->data))
-		{
-			if (leaf->XnYnZn != nullptr)
-				Insert(data, leaf->XnYnZn);
-			else
-			{
-				leaf->XnYnZn = newOctreeNode(data);
-			}
+			Insert(splits[0], node->XpYpZp);
+			Insert(splits[1], node->XpYpZn);
+			Insert(splits[2], node->XpYnZp);
+			Insert(splits[3], node->XpYnZn);
+			Insert(splits[4], node->XnYpZp);
+			Insert(splits[5], node->XnYpZn);
+			Insert(splits[6], node->XnYnZp);
+			Insert(splits[7], node->XnYnZn);
 		}
 	}
-	OctreeNode* Search(vec3 data, OctreeNode* leaf)
+
+
+	OctreeNode* Search(vec3 data, OctreeNode * leaf)
 	{
 		if (leaf != nullptr)
 		{
-			if (data == leaf->data)
-				return leaf;
-			if (data.isXpYpZp(leaf->data))
+			if (leaf->data != nullptr) //this automatically means that we are in a leaf, and have data
+			{
+				bool found = false;
+				for (auto vert : (*leaf->data))
+				{
+					if (vert.position == data)
+						return leaf;
+				}
+				if (!found)
+					return nullptr;
+
+			}
+			if (data.isXpYpZp(leaf->position))
 				return Search(data, leaf->XpYpZp);
-			else if (data.isXpYpZn(leaf->data))
+			else if (data.isXpYpZn(leaf->position))
 				return Search(data, leaf->XpYpZn);
-			else if (data.isXpYnZp(leaf->data))
+			else if (data.isXpYnZp(leaf->position))
 				return Search(data, leaf->XpYnZp);
-			else if (data.isXpYnZn(leaf->data))
+			else if (data.isXpYnZn(leaf->position))
 				return Search(data, leaf->XpYnZn);
-			else if (data.isXnYpZp(leaf->data))
+			else if (data.isXnYpZp(leaf->position))
 				return Search(data, leaf->XnYpZp);
-			else if (data.isXnYpZn(leaf->data))
+			else if (data.isXnYpZn(leaf->position))
 				return Search(data, leaf->XnYpZn);
-			else if (data.isXnYnZp(leaf->data))
+			else if (data.isXnYnZp(leaf->position))
 				return Search(data, leaf->XnYnZp);
-			else if (data.isXnYnZn(leaf->data))
+			else if (data.isXnYnZn(leaf->position))
 				return Search(data, leaf->XnYnZn);
 		}
 		else
 			return nullptr;
 	}
 };
+
+#endif
