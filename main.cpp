@@ -11,6 +11,7 @@
 
 #include<iostream>
 #include<string>
+#include<fstream>
 #include "shader.h"
 #include "camera.h"
 #include "model.h"
@@ -80,6 +81,9 @@ int main()
 	glEnable(GL_CULL_FACE); //enable culling
 	glCullFace(GL_BACK); //tell opengl to cull back faces
 	glFrontFace(GL_CCW); //set the front faces to be counter-clockwise winded
+
+	ofstream FPSOutput; //for logging fps onto a csv file
+	FPSOutput.open("fps.csv");
 
 	//------------------------------------------------------------------------------------------------
 	//Geometry and shader setup
@@ -329,6 +333,7 @@ int main()
 		
 		if (started) //When simulation is started(keystroke), start denting the target
 		{
+			FPSOutput << currentFPS << "\n";
 			if (firstPass) //First pass is for setting up the models, all done in 1 frame lol
 			{
 				legitProjectile.ProcessRays(target, model);
@@ -336,8 +341,15 @@ int main()
 				std::cout << "Target has been set up.\n";
 				firstPass = false;
 			}
-			if(!legitProjectile.isDone)
+			if (!legitProjectile.isDone)
+			{
 				legitProjectile.Update(target, 0.0167f, target.model);
+			}
+			else
+			{
+				started = false;
+				FPSOutput.close();
+			}
 		}
 
 		//Reset the model matrix and render the ray itself
@@ -350,13 +362,12 @@ int main()
 		legitProjectile.RenderInfiniteRays(view, projection);
 
 		//Rendering text
-		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
-		text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
-		if (glfwGetTime() - lastFPSCheck > 0.3)
-		{ //Updating the fps meter every 1/3 of a second
-			lastFPSCheck = glfwGetTime();
-			currentFPS = 1 / deltaTime;
-		}
+		//glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
+		//text.renderText(textShader, "FPS:" + std::to_string(currentFPS), 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		//if (glfwGetTime() - lastFPSCheck > 0.3)
+		//{ //Updating the fps meter every 1/3 of a second
+		currentFPS = 1 / deltaTime;
+		//}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
