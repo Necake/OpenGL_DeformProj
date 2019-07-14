@@ -3,10 +3,12 @@
 
 #include<vector>
 #include<iostream>
-#include<glm.hpp>
-#include<gtc\matrix_transform.hpp>
-#include<gtc\type_ptr.hpp>
-#include<gtc\constants.hpp>
+#include<glm\glm.hpp>
+#include<glm\gtc\matrix_transform.hpp>
+#include<glm\gtc\type_ptr.hpp>
+#include<glm\gtc\constants.hpp>
+
+#include"target.h"
 
 namespace vecUtil
 {
@@ -69,13 +71,10 @@ namespace vecUtil
 	float x, y, z;
 };
 
-struct Vertex
-{
-	glm::vec3 position;
-	glm::vec3 normal;
-};
+
 struct Triangle
 {
+	/*
 	glm::vec3 v0;
 	glm::vec3 v1;
 	glm::vec3 v2;
@@ -88,6 +87,17 @@ struct Triangle
 		this->v0 = v0;
 		this->v1 = v1;
 		this->v2 = v2;
+	}*/
+	//indices from the model indices
+	int index0;
+	int index1;
+	int index2;
+
+	Triangle(int i0, int i1, int i2)
+	{
+		index0 = i0;
+		index1 = i1;
+		index2 = i2;
 	}
 };
 
@@ -124,12 +134,12 @@ OctreeNode* newOctreeNode(float size, glm::vec3 position)
 	return newNode;
 }
 
-bool satTest(Triangle tri, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3)
+bool satTest(const Model& model, Triangle tri, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3)
 {
 	//project triangle/aabb onto the axis
-	float p0 = glm::dot(tri.v0, axis);
-	float p1 = glm::dot(tri.v1, axis);
-	float p2 = glm::dot(tri.v2, axis);
+	float p0 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position, axis);
+	float p1 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index1]].Position, axis);
+	float p2 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index2]].Position, axis);
 	float r = e * fabs(glm::dot(norm1, axis)) + e * fabs(glm::dot(norm2, axis)) + e * fabs(glm::dot(norm3, axis));
 
 	if (fmaxf(-fmaxf(fmaxf(p0, p1), p2), fminf(fminf(p0, p1), p2)) > r)
@@ -139,18 +149,18 @@ bool satTest(Triangle tri, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 n
 	return true;
 }
 
-bool TriangleOctantIntersection(float octantSize, glm::vec3 octantPos, Triangle tri)
+bool TriangleOctantIntersection(const Model& model, float octantSize, glm::vec3 octantPos, Triangle tri)
 {
 	float e = octantSize / 2;
 	//translate all verts so the cube pos is actually the origin when testing
-	tri.v0 -= octantPos;
-	tri.v1 -= octantPos;
-	tri.v2 -= octantPos;
+	glm::vec3 v0 = model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position - octantPos;
+	glm::vec3 v1 = model.meshes[0].vertices[model.meshes[0].indices[tri.index1]].Position - octantPos;
+	glm::vec3 v2 = model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position - octantPos;
 
-	glm::vec3 edge1 = tri.v1 - tri.v0;
-	glm::vec3 edge2 = tri.v2 - tri.v1;
-	glm::vec3 edge3 = tri.v0 - tri.v2;
-	glm::vec3 triNorm = glm::cross((tri.v2 - tri.v0), (tri.v1 - tri.v0));
+	glm::vec3 edge1 = v1 - v0;
+	glm::vec3 edge2 = v2 - v1;
+	glm::vec3 edge3 = v0 - v2;
+	glm::vec3 triNorm = glm::cross((v2 - v0), (v1 - v0));
 
 	glm::vec3 norm1 = glm::vec3(1.0f, 0.0f, 0.0f);
 	glm::vec3 norm2 = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -169,31 +179,31 @@ bool TriangleOctantIntersection(float octantSize, glm::vec3 octantPos, Triangle 
 	glm::vec3 axisn3e3 = glm::cross(norm3, edge3);
 
 
-	if (!satTest(tri, axisn1e1, e, norm1, norm2, norm3)) //1
+	if (!satTest(model, tri, axisn1e1, e, norm1, norm2, norm3)) //1
 		return false;
-	if (!satTest(tri, axisn1e2, e, norm1, norm2, norm3)) //2
+	if (!satTest(model, tri, axisn1e2, e, norm1, norm2, norm3)) //2
 		return false;
-	if (!satTest(tri, axisn1e3, e, norm1, norm2, norm3)) //3
+	if (!satTest(model, tri, axisn1e3, e, norm1, norm2, norm3)) //3
 		return false;
-	if (!satTest(tri, axisn2e1, e, norm1, norm2, norm3)) //4
+	if (!satTest(model, tri, axisn2e1, e, norm1, norm2, norm3)) //4
 		return false;
-	if (!satTest(tri, axisn2e2, e, norm1, norm2, norm3)) //5
+	if (!satTest(model, tri, axisn2e2, e, norm1, norm2, norm3)) //5
 		return false;
-	if (!satTest(tri, axisn2e3, e, norm1, norm2, norm3)) //6
+	if (!satTest(model, tri, axisn2e3, e, norm1, norm2, norm3)) //6
 		return false;
-	if (!satTest(tri, axisn3e1, e, norm1, norm2, norm3)) //7
+	if (!satTest(model, tri, axisn3e1, e, norm1, norm2, norm3)) //7
 		return false;
-	if (!satTest(tri, axisn3e2, e, norm1, norm2, norm3)) //8
+	if (!satTest(model, tri, axisn3e2, e, norm1, norm2, norm3)) //8
 		return false;
-	if (!satTest(tri, axisn3e3, e, norm1, norm2, norm3)) //9
+	if (!satTest(model, tri, axisn3e3, e, norm1, norm2, norm3)) //9
 		return false;
-	if (!satTest(tri, norm1, e, norm1, norm2, norm3)) //10
+	if (!satTest(model, tri, norm1, e, norm1, norm2, norm3)) //10
 		return false;
-	if (!satTest(tri, norm2, e, norm1, norm2, norm3)) //11
+	if (!satTest(model, tri, norm2, e, norm1, norm2, norm3)) //11
 		return false;
-	if (!satTest(tri, norm3, e, norm1, norm2, norm3)) //12
+	if (!satTest(model, tri, norm3, e, norm1, norm2, norm3)) //12
 		return false;
-	if (!satTest(tri, triNorm, e, norm1, norm2, norm3)) //13
+	if (!satTest(model, tri, triNorm, e, norm1, norm2, norm3)) //13
 		return false;
 
 	return true;
@@ -203,7 +213,7 @@ bool TriangleOctantIntersection(float octantSize, glm::vec3 octantPos, Triangle 
 class Octree
 {
 public:
-	Octree(float minSize, int maxVerts, int maxTris, int depth, float initSize, glm::vec3 initPos)
+	Octree(Model& model, float minSize, int maxVerts, int maxTris, int depth, float initSize, glm::vec3 initPos): model(model)
 	{
 		this->minSize = minSize;
 		this->maxVerts = maxVerts;
@@ -212,7 +222,6 @@ public:
 		this->size = initSize;
 		root = newOctreeNode(size, initPos);//new OctreeNode(size, initPos); //init cvor
 		InitSubdivide(root, this->depth);
-
 	}
 	~Octree()
 	{
@@ -256,6 +265,7 @@ public:
 	}
 
 	OctreeNode* root;
+	Model& model;
 	float minSize; //the most subdivisions allowed
 	float size; //size of the space
 	int maxVerts; //the most vertices allowed in an octant
@@ -340,7 +350,7 @@ private:
 				for (auto pos : dataArray)
 				{
 					Vertex vert;
-					vert.position = pos;
+					vert.Position = pos;
 					std::cout << "pushing back vertex... ";
 					node->vertices->push_back(vert);
 					std::cout << "done!\n";
@@ -397,7 +407,7 @@ private:
 				//std::cout << ", condition met\n";
 				for (auto tri : dataArray)
 				{
-					if (TriangleOctantIntersection(node->size, node->position, tri)) //if they intersect, add it here
+					if (TriangleOctantIntersection(model, node->size, node->position, tri)) //if they intersect, add it here
 					{
 						std::cout << "pushing back triangle... ";
 						node->tris->push_back(tri);
@@ -414,42 +424,42 @@ private:
 			for (int i =0; i < dataArray.size(); i++)
 			{
 				Triangle newTri = dataArray[i];
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(halfSize, halfSize, halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(halfSize, halfSize, halfSize), newTri))
 				{
 					splits[0].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(halfSize, halfSize, -halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(halfSize, halfSize, -halfSize), newTri))
 				{
 					splits[1].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(halfSize, -halfSize, halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(halfSize, -halfSize, halfSize), newTri))
 				{
 					splits[2].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(halfSize, -halfSize, -halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(halfSize, -halfSize, -halfSize), newTri))
 				{
 					splits[3].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(-halfSize, halfSize, halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(-halfSize, halfSize, halfSize), newTri))
 				{
 					splits[4].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(-halfSize, halfSize, -halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(-halfSize, halfSize, -halfSize), newTri))
 				{
 					splits[5].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(-halfSize, -halfSize, halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(-halfSize, -halfSize, halfSize), newTri))
 				{
 					splits[6].push_back(newTri);
 
 				}
-				if (TriangleOctantIntersection(halfSize * 2, node->position + glm::vec3(-halfSize, -halfSize, -halfSize), newTri))
+				if (TriangleOctantIntersection(model, halfSize * 2, node->position + glm::vec3(-halfSize, -halfSize, -halfSize), newTri))
 				{
 					splits[7].push_back(newTri);
 
@@ -672,7 +682,7 @@ private:
 				bool found = false;
 				for (auto vert : (*leaf->vertices))
 				{
-					if (vert.position == data)
+					if (vert.Position == data)
 						return leaf;
 				}
 				if (!found)

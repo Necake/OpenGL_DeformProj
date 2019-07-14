@@ -5,3 +5,4 @@ OpenGL_DeformProj.vcxproj
 vertOutput.txt
 objFrag_full.frag
 objFrag.frag
+fps.csv
