@@ -137,7 +137,7 @@ OctreeNode* newOctreeNode(float size, glm::vec3 position)
 bool satTest(const Model& model, Triangle tri, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3)
 {
 	//project triangle/aabb onto the axis
-	float p0 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position, axis);
+	float p0 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position, axis); //ovde je bag, mora da se oduzme octantpos
 	float p1 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index1]].Position, axis);
 	float p2 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index2]].Position, axis);
 	float r = e * fabs(glm::dot(norm1, axis)) + e * fabs(glm::dot(norm2, axis)) + e * fabs(glm::dot(norm3, axis));
@@ -155,7 +155,7 @@ bool TriangleOctantIntersection(const Model& model, float octantSize, glm::vec3 
 	//translate all verts so the cube pos is actually the origin when testing
 	glm::vec3 v0 = model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position - octantPos;
 	glm::vec3 v1 = model.meshes[0].vertices[model.meshes[0].indices[tri.index1]].Position - octantPos;
-	glm::vec3 v2 = model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position - octantPos;
+	glm::vec3 v2 = model.meshes[0].vertices[model.meshes[0].indices[tri.index2]].Position - octantPos;
 
 	glm::vec3 edge1 = v1 - v0;
 	glm::vec3 edge2 = v2 - v1;

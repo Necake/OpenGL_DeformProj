@@ -17,8 +17,8 @@
 #include "model.h"
 #include "textRendering.h"
 #include "rayUtil.h"
-#include "projectile.h"
-#include "target.h"
+#include "optimalProjectile.h"
+#include "optimalTarget.h"
 
 //------------------------------------------------------------------------------------------------
 //Function prototypes
@@ -237,12 +237,14 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	Target target("../../OpenGLAssets/testModels/testPlaneHiRes.obj", 3.0f, 3.0f, 1);
+	OctreeTarget target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 3.0f, 1);
+	Octree sceneOctree(target.targetModel, 2.48f, 3, 3, 1, target.boundingBoxSize, target.boundingBoxCenter);
+	target.SetupTree(sceneOctree);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
 	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
-	Projectile legitProjectile("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.03f, 0.0f));
+	OctreeProjectile legitProjectile("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.03f, 0.0f));
 	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
 	//Fps counter constants

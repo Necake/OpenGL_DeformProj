@@ -15,7 +15,7 @@
 #include<string>
 #include<fstream>
 #include<utility>
-#include "target.h"
+#include "optimalTarget.h"
 #include "shader.h"
 #include "model.h"
 #include "rayUtil.h"
@@ -39,7 +39,7 @@ public:
 	}
 
 	//Casts a single ray on a given triangle of a target, given the ray origin (transformed using a model matrix)
-	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model, float& hitDistance)
+	bool CastRay(OctreeTarget& target, int indexv0, int indexv1, int indexv2, glm::vec3 rayOrigin, glm::mat4 model, float& hitDistance)
 	{
 		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
 		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
@@ -55,7 +55,7 @@ public:
 		return RayUtil::MTRayCheck(vert0, vert1, vert2, model * glm::vec4(rayOrigin, 1.0f), glm::normalize(-rayDirection), hitDistance);
 	}
 
-	void ProcessRays(Target & target, glm::mat4 model)
+	void ProcessRays(OctreeTarget& target, glm::mat4 model)
 	{
 		//cast rays from projectile onto target
 		for (auto vertexPos : optimizedVerts)
@@ -101,7 +101,7 @@ public:
 	}
 
 	//Mesh preprocessing, detects all intersections, bruteforce
-	void ProcessTarget(Target & target, glm::mat4 model)
+	void ProcessTarget(OctreeTarget& target, glm::mat4 model)
 	{
 		if (collision) //If (at least one) ray has intersected with the target
 		{
@@ -138,14 +138,14 @@ public:
 		projectileMesh.Draw(shader);
 	}
 
-	void DentVertexDirect(Target & target, int index, glm::mat4 model)
+	void DentVertexDirect(OctreeTarget& target, int index, glm::mat4 model)
 	{
 		target.targetModel.TranslateVertex(0, index, speed * target.vertInfo[index].hitIntensity);
 		//Update the deformed vertices in the vertex buffer
 		target.targetModel.meshes[0].UpdateBufferVertexDirect(index);
 	}
 
-	void Update(Target & target, float time, glm::mat4 model)
+	void Update(OctreeTarget& target, float time, glm::mat4 model)
 	{
 		if (collision)
 		{
