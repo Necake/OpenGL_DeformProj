@@ -261,11 +261,11 @@ private:
 //----------------------------------------------------------------------------------------
 
 
-class PointProjectile
+class OctreePointProjectile
 {
 public:
 	//Constructor, takes the position/origin of ray and the acceleration
-	PointProjectile(glm::vec3 pos, glm::vec3 acc) :
+	OctreePointProjectile(glm::vec3 pos, glm::vec3 acc) :
 		projectilePosition(pos), acceleration(acc),
 		rayShader("../OpenGL_DeformProj/ray.vert", "../OpenGL_DeformProj/ray.frag"), rayDirection(acceleration)
 	{
@@ -274,23 +274,54 @@ public:
 	}
 
 	//Casts a single ray on a given triangle of a target (transformed using a model matrix)
-	bool CastRay(Target& target, int indexv0, int indexv1, int indexv2, glm::mat4 model)
+	bool CastRay(Octree& tree, glm::mat4 model)
 	{
-		//std::cout << "Ray cast at: " << indexv0 << " " << indexv1 << " " << indexv2 << "\n";
-		glm::vec3 vert0 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv0]].Position, 1.0f));
-		glm::vec3 vert1 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv1]].Position, 1.0f));
-		glm::vec3 vert2 = (model * glm::vec4(target.targetModel.meshes[0].vertices[target.targetModel.meshes[0].indices[indexv2]].Position, 1.0f));
-		bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
-		if (rayResult)
+		//preform search in given octant
+		OctreeNode* targetOctant = tree.FindOctant(projectilePosition + rayDirection * 100.0f);
+		if (targetOctant != nullptr)
 		{
-			std::cout << "ray hit at " << indexv0 << " " << indexv1 << " " << indexv2 <<
-				"\n accel: " << acceleration.x << acceleration.y << acceleration.z <<
-				"\n speed: " << speed.x << speed.y << speed.z << "\n";
-			return true;
+			if (targetOctant->tris != nullptr)
+			{
+				if (targetOctant->tris->size() > 0)
+				{
+					for (int i = 0; i < targetOctant->tris->size(); i++)
+					{
+						glm::vec3 vert0 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index0].Position;
+						glm::vec3 vert1 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index1].Position;
+						glm::vec3 vert2 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index2].Position;
+						bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
+						if (rayResult)
+						{
+							return true;
+						}
+					}
+					return false;
+				}
+			}
 		}
+		else
+		{
+			std::cout << "outside the bounds\n";
+		}
+		/*
+		for (int i = 0; i < targetOctant->tris->size(); i++)
+		{
+			glm::vec3 vert0 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index0].Position;
+			glm::vec3 vert1 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index1].Position;
+			glm::vec3 vert2 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index2].Position;
+			bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
+			if (rayResult)
+			{
+				std::cout << "ray hit at " << (*targetOctant->tris)[i].index0 << " " << (*targetOctant->tris)[i].index1
+					<< " " << (*targetOctant->tris)[i].index2 << "\n";
+				return true;
+			}
+			return false;
+		}*/
 		return false;
+		
 	}
-
+	/*
 	void ProcessRay(Target& target, glm::mat4 model)
 	{
 		//For each triangle in the mesh, do stuff
@@ -306,7 +337,7 @@ public:
 				collision = true;
 			}
 		}
-	}
+	}*/
 	//Mesh preprocessing, detects all intersections, bruteforce
 	void ProcessTarget(Target& target, glm::mat4 model)
 	{
@@ -341,7 +372,7 @@ public:
 	//Renders a ray that has length of acceleration
 	void RenderRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
 	{
-		RayUtil::renderRay(projectilePosition, rayDirection, view, model, projection, rayShader);
+		RayUtil::renderRay(projectilePosition, rayDirection * 100.0f, view, model, projection, rayShader);
 	}
 
 	//Renders a ray with infinite length

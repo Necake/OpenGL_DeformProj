@@ -52,6 +52,8 @@ bool firstMouse = true;
 //TODO: delete dis
 float dentSpeed = 0.01f; bool started = false;
 
+float rayPosY = 2.0f;
+
 int main()
 {
 	//------------------------------------------------------------------------------------------------
@@ -237,13 +239,14 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	OctreeTarget target("../../OpenGLAssets/testModels/simplestPlane.obj", 3.0f, 3.0f, 1);
-	Octree sceneOctree(target.targetModel, target.boundingBoxSize* 0.5f, 3, 3, 2, target.boundingBoxSize + 0.5f, target.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
+	OctreeTarget target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 3.0f, 1);
+	Octree sceneOctree(target.targetModel, target.boundingBoxSize* 0.5f, 3, 3, 3, target.boundingBoxSize + 0.5f, target.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
 	target.SetupTree(sceneOctree);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
 	//Loading the projectile
-	PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
+	//PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
+	OctreePointProjectile octreeTester(glm::vec3(0, rayPosY, 0), glm::vec3(0.0f, -0.03f, 0.0f));
 	OctreeProjectile legitProjectile("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.03f, 0.0f));
 	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
@@ -327,7 +330,7 @@ int main()
 		model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
 		//model = glm::rotate(model, (float)glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
-		model = glm::translate(model, glm::vec3(0.5f, -3.2f, 0.2f));
+		//model = glm::translate(model, glm::vec3(0.5f, -3.2f, 0.2f));
 		objShader.use();
 		target.model = model;
 		target.Draw(objShader);
@@ -362,6 +365,15 @@ int main()
 		legitProjectile.model = model;
 		legitProjectile.Draw(projShader);
 		legitProjectile.RenderInfiniteRays(view, projection);
+
+		octreeTester.projectilePosition.y = rayPosY;
+		octreeTester.RenderRay(view, model, projection);
+
+		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
+		if (octreeTester.CastRay(sceneOctree, model))
+		{
+			text.renderText(textShader, "hit ray!", 0.0f, windowHeight - 24.0f, 1.0f, textCanvas);
+		}
 
 		//Rendering text
 		//glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
@@ -475,6 +487,15 @@ void processInput(GLFWwindow * window)
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
 		started = true;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+	{
+		rayPosY -= deltaTime;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+	{
+		rayPosY += deltaTime;
 	}
 }
 

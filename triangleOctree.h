@@ -255,6 +255,11 @@ public:
 
 	OctreeNode* FindOctant(glm::vec3 data)
 	{
+		if (fabs(data.x) > size || fabs(data.y) > size || fabs(data.z) > size)
+		{
+			//the vector is outside of the tree
+			return nullptr;
+		}
 		return FindOctant(data, root);
 	}
 
@@ -683,12 +688,6 @@ private:
 	//Find octant of given data, will use for falloff origin
 	OctreeNode* FindOctant(glm::vec3 data, OctreeNode * node)
 	{
-		if (fabs(data.x) > size || fabs(data.y) > size || fabs(data.z) > size)
-		{
-			//the vector is outside of the tree
-			return nullptr;
-		}
-
 		if (node->XpYpZp == nullptr)
 		{
 			//if it's a leaf
