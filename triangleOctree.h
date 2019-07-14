@@ -9,6 +9,7 @@
 #include<glm\gtc\constants.hpp>
 
 #include"target.h"
+#include"aabbtriCollision.h"
 
 namespace vecUtil
 {
@@ -93,6 +94,8 @@ struct Triangle
 	int index1;
 	int index2;
 
+	glm::vec3 positions[3];
+
 	Triangle(int i0, int i1, int i2)
 	{
 		index0 = i0;
@@ -134,12 +137,12 @@ OctreeNode* newOctreeNode(float size, glm::vec3 position)
 	return newNode;
 }
 
-bool satTest(const Model& model, Triangle tri, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3)
+bool satTest(glm::vec3 pos0, glm::vec3 pos1, glm::vec3 pos2, glm::vec3 axis, float e, glm::vec3 norm1, glm::vec3 norm2, glm::vec3 norm3)
 {
 	//project triangle/aabb onto the axis
-	float p0 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index0]].Position, axis); //ovde je bag, mora da se oduzme octantpos
-	float p1 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index1]].Position, axis);
-	float p2 = glm::dot(model.meshes[0].vertices[model.meshes[0].indices[tri.index2]].Position, axis);
+	float p0 = glm::dot(pos0, axis);
+	float p1 = glm::dot(pos1, axis);
+	float p2 = glm::dot(pos2, axis);
 	float r = e * fabs(glm::dot(norm1, axis)) + e * fabs(glm::dot(norm2, axis)) + e * fabs(glm::dot(norm3, axis));
 
 	if (fmaxf(-fmaxf(fmaxf(p0, p1), p2), fminf(fminf(p0, p1), p2)) > r)
@@ -179,31 +182,31 @@ bool TriangleOctantIntersection(const Model& model, float octantSize, glm::vec3 
 	glm::vec3 axisn3e3 = glm::cross(norm3, edge3);
 
 
-	if (!satTest(model, tri, axisn1e1, e, norm1, norm2, norm3)) //1
+	if (!satTest(v0, v1, v2, axisn1e1, e, norm1, norm2, norm3)) //1
 		return false;
-	if (!satTest(model, tri, axisn1e2, e, norm1, norm2, norm3)) //2
+	if (!satTest(v0, v1, v2, axisn1e2, e, norm1, norm2, norm3)) //2
 		return false;
-	if (!satTest(model, tri, axisn1e3, e, norm1, norm2, norm3)) //3
+	if (!satTest(v0, v1, v2, axisn1e3, e, norm1, norm2, norm3)) //3
 		return false;
-	if (!satTest(model, tri, axisn2e1, e, norm1, norm2, norm3)) //4
+	if (!satTest(v0, v1, v2, axisn2e1, e, norm1, norm2, norm3)) //4
 		return false;
-	if (!satTest(model, tri, axisn2e2, e, norm1, norm2, norm3)) //5
+	if (!satTest(v0, v1, v2, axisn2e2, e, norm1, norm2, norm3)) //5
 		return false;
-	if (!satTest(model, tri, axisn2e3, e, norm1, norm2, norm3)) //6
+	if (!satTest(v0, v1, v2, axisn2e3, e, norm1, norm2, norm3)) //6
 		return false;
-	if (!satTest(model, tri, axisn3e1, e, norm1, norm2, norm3)) //7
+	if (!satTest(v0, v1, v2, axisn3e1, e, norm1, norm2, norm3)) //7
 		return false;
-	if (!satTest(model, tri, axisn3e2, e, norm1, norm2, norm3)) //8
+	if (!satTest(v0, v1, v2, axisn3e2, e, norm1, norm2, norm3)) //8
 		return false;
-	if (!satTest(model, tri, axisn3e3, e, norm1, norm2, norm3)) //9
+	if (!satTest(v0, v1, v2, axisn3e3, e, norm1, norm2, norm3)) //9
 		return false;
-	if (!satTest(model, tri, norm1, e, norm1, norm2, norm3)) //10
+	if (!satTest(v0, v1, v2, norm1, e, norm1, norm2, norm3)) //10
 		return false;
-	if (!satTest(model, tri, norm2, e, norm1, norm2, norm3)) //11
+	if (!satTest(v0, v1, v2, norm2, e, norm1, norm2, norm3)) //11
 		return false;
-	if (!satTest(model, tri, norm3, e, norm1, norm2, norm3)) //12
+	if (!satTest(v0, v1, v2, norm3, e, norm1, norm2, norm3)) //12
 		return false;
-	if (!satTest(model, tri, triNorm, e, norm1, norm2, norm3)) //13
+	if (!satTest(v0, v1, v2, triNorm, e, norm1, norm2, norm3)) //13
 		return false;
 
 	return true;
@@ -396,9 +399,10 @@ private:
 		}
 	}
 
+	/*
 	void InsertTriangles(std::vector<Triangle> dataArray, OctreeNode* node)
 	{
-		if ((dataArray.size() < maxTris) || (node->size / 2.0f < minSize))
+		if (((dataArray.size() < maxTris) || (node->size / 2.0f < minSize)) && node->XpYpZp == nullptr)
 		{
 			//exit recursion and piss off
 			if (dataArray.size() > 0)
@@ -414,7 +418,7 @@ private:
 						std::cout << "done!\n";
 					}
 				}
-				std::cout << "pushed back data of " << dataArray.size() << " tris into node sized " << node->size << "\n";
+				std::cout << "pushed back data of " << dataArray.size() << " tris into node sized " << node->size << "addr: " << node << "\n";
 			}
 		}
 		else
@@ -478,7 +482,42 @@ private:
 			InsertTriangles(splits[6], node->XnYnZp);
 			InsertTriangles(splits[7], node->XnYnZn);
 		}
+	}*/
+	void InsertTriangles(std::vector<Triangle> dataArray, OctreeNode* node)
+	{
+		if (node->XpYpZp == nullptr)
+		{
+			//onda je list, odjebi i zavrsi
+
+			node->tris = new std::vector<Triangle>();
+			for (int i = 0; i < dataArray.size(); i++)
+			{
+				glm::vec3 triangleVerts[3] = { model.meshes[0].vertices[dataArray[i].index0].Position,
+					model.meshes[0].vertices[dataArray[i].index1].Position, 
+					model.meshes[0].vertices[dataArray[i].index2].Position };
+				if (triBoxOverlap(node->position, glm::vec3(node->size / 2, node->size / 2, node->size / 2), triangleVerts)) //(model, node->size, node->position, dataArray[i]))
+				{
+					dataArray[i].positions[0] = model.meshes[0].vertices[dataArray[i].index0].Position;
+					dataArray[i].positions[1] = model.meshes[0].vertices[dataArray[i].index1].Position;
+					dataArray[i].positions[2] = model.meshes[0].vertices[dataArray[i].index2].Position;
+					node->tris->push_back(dataArray[i]);
+					std::cout << "pushed triangle into addr: " << node << "\n";
+				}
+			}
+		}
+		else
+		{
+			InsertTriangles(dataArray, node->XpYpZp);
+			InsertTriangles(dataArray, node->XpYpZn);
+			InsertTriangles(dataArray, node->XpYnZp);
+			InsertTriangles(dataArray, node->XpYnZn);
+			InsertTriangles(dataArray, node->XnYpZp);
+			InsertTriangles(dataArray, node->XnYpZn);
+			InsertTriangles(dataArray, node->XnYnZp);
+			InsertTriangles(dataArray, node->XnYnZn);
+		}
 	}
+
 
 	//To be used for falloff functions
 	OctreeNode* FindAdjacentToData(OctreeNode * node, glm::vec3 data)

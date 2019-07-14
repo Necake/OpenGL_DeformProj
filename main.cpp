@@ -237,8 +237,8 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	OctreeTarget target("../../OpenGLAssets/testModels/testPlane.obj", 3.0f, 3.0f, 1);
-	Octree sceneOctree(target.targetModel, 2.48f, 3, 3, 1, target.boundingBoxSize, target.boundingBoxCenter);
+	OctreeTarget target("../../OpenGLAssets/testModels/simplestPlane.obj", 3.0f, 3.0f, 1);
+	Octree sceneOctree(target.targetModel, target.boundingBoxSize* 0.5f, 3, 3, 2, target.boundingBoxSize + 0.5f, target.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
 	target.SetupTree(sceneOctree);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
