@@ -274,10 +274,10 @@ public:
 	}
 
 	//Casts a single ray on a given triangle of a target (transformed using a model matrix)
-	bool CastRay(Octree& tree, glm::mat4 model)
+	bool CastRay(Octree& tree, OctreeTarget& target)
 	{
 		//preform search in given octant
-		OctreeNode* targetOctant = tree.FindOctant(projectilePosition + rayDirection * 100.0f);
+		OctreeNode* targetOctant = tree.FindOctant(projectilePosition + speed);
 		if (targetOctant != nullptr)
 		{
 			if (targetOctant->tris != nullptr)
@@ -290,8 +290,17 @@ public:
 						glm::vec3 vert1 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index1].Position;
 						glm::vec3 vert2 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index2].Position;
 						bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
-						if (rayResult)
+						if (rayResult && (hitDistance < glm::length(speed))) // there's gonna be a hit next frame
 						{
+							//odmah ovde dentuj da ne bi radio pretragu bezveze
+							acceleration = -rayDirection;
+							affectedTriangle.index0 = (*targetOctant->tris)[i].index0;
+							affectedTriangle.index1 = (*targetOctant->tris)[i].index1;
+							affectedTriangle.index2 = (*targetOctant->tris)[i].index2;
+
+							collision = true;
+							hitPoint = projectilePosition + hitDistance * glm::normalize(rayDirection);
+							CalcLocalFalloff(tree, target);
 							return true;
 						}
 					}
@@ -299,45 +308,9 @@ public:
 				}
 			}
 		}
-		else
-		{
-			std::cout << "outside the bounds\n";
-		}
-		/*
-		for (int i = 0; i < targetOctant->tris->size(); i++)
-		{
-			glm::vec3 vert0 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index0].Position;
-			glm::vec3 vert1 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index1].Position;
-			glm::vec3 vert2 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index2].Position;
-			bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, projectilePosition, glm::normalize(rayDirection), hitDistance);
-			if (rayResult)
-			{
-				std::cout << "ray hit at " << (*targetOctant->tris)[i].index0 << " " << (*targetOctant->tris)[i].index1
-					<< " " << (*targetOctant->tris)[i].index2 << "\n";
-				return true;
-			}
-			return false;
-		}*/
 		return false;
 		
 	}
-	/*
-	void ProcessRay(Target& target, glm::mat4 model)
-	{
-		//For each triangle in the mesh, do stuff
-		for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
-		{
-			//Cast rays on each triangle
-			bool rayResult = CastRay(target, i, i + 1, i + 2, model);
-			if (rayResult) //If we get a collision, push the vertices into those that need to be deformed
-			{
-				hitPoint = projectilePosition + hitDistance * glm::normalize(rayDirection);
-				std::cout << "hit distance: " << hitDistance << "\nhitpoint: x: " << hitPoint.x << " y: " << hitPoint.y << " z: " << hitPoint.z << "\n";
-				std::cout << "pushed " << i << " " << i + 1 << " " << i + 2 << " indices\n";
-				collision = true;
-			}
-		}
-	}*/
 	//Mesh preprocessing, detects all intersections, bruteforce
 	void ProcessTarget(Target& target, glm::mat4 model)
 	{
@@ -372,7 +345,7 @@ public:
 	//Renders a ray that has length of acceleration
 	void RenderRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
 	{
-		RayUtil::renderRay(projectilePosition, rayDirection * 100.0f, view, model, projection, rayShader);
+		RayUtil::renderRay(projectilePosition, rayDirection, view, model, projection, rayShader);
 	}
 
 	//Renders a ray with infinite length
@@ -381,52 +354,81 @@ public:
 		RayUtil::renderRay(projectilePosition, rayDirection * 1000000.0f, view, model, projection, rayShader);
 	}
 
-	void Update(Target & target, float time, glm::mat4 model)
+	void CalcLocalFalloff(Octree& tree, OctreeTarget& target)
+	{
+		OctreeNode* falloffCenter = tree.FindFalloffCenterNode(hitPoint, target.falloff);
+	}
+
+	void AffectFalloff(OctreeNode* node, OctreeTarget& target)
+	{
+		//affect all subnodes
+		if (node->XpYpZp == nullptr)
+		{
+			//it's a leaf
+			if (node->tris != nullptr)
+			{
+				for (int i = 0; i < node->tris->size(); i++)
+				{
+					target.vertInfo[(*node->tris)[i].index0].hitIntensity =
+						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index0].Position - hitPoint));
+					target.vertInfo[(*node->tris)[i].index1].hitIntensity =
+						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index1].Position - hitPoint));
+					target.vertInfo[(*node->tris)[i].index2].hitIntensity =
+						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index2].Position - hitPoint));
+				}
+			}
+		}
+		else
+		{
+			AffectFalloff(node->XpYpZp, target);
+			AffectFalloff(node->XpYpZn, target);
+			AffectFalloff(node->XpYnZp, target);
+			AffectFalloff(node->XpYnZn, target);
+			AffectFalloff(node->XnYpZp, target);
+			AffectFalloff(node->XnYpZn, target);
+			AffectFalloff(node->XnYnZp, target);
+			AffectFalloff(node->XnYnZn, target);
+		}
+	}
+
+
+	void Update(Octree& tree, OctreeTarget& target, float time, glm::mat4 model)
 	{
 		if (collision)
 		{
-			projectilePosition += speed; //Change projectile position according to current speed
-			hitDistance = glm::length(projectilePosition - hitPoint);
-			if (hitDistance < 0.05f)
-			{
-				isColliding = true;
-				acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
-				std::cout << "we hit the mesh\n";
-			}
-			if (isColliding)
-			{
-				if (!hasProcessed)
-				{
-					hasProcessed = true;
-					ProcessTarget(target, model);
-				}
-				else
-				{
-					DentTarget(target, time, model);
-				}
-			}
+			tree.model.meshes[0].vertices[affectedTriangle.index0].Position += speed;
+			tree.model.meshes[0].vertices[affectedTriangle.index1].Position += speed;
+			tree.model.meshes[0].vertices[affectedTriangle.index2].Position += speed;
+			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index0);
+			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index1);
+			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index2);
 
-			//If the speed beomes the opposite direction of the ray, we hammer it at zero,
-			//because we don't want backwards movement
-			if (glm::dot(speed, rayDirection) < __EPSILON)
-			{
-				speed = glm::vec3(0, 0, 0);
-			}
-			else
-			{ //else, we update the speed appropriately
-				speed += acceleration * time;
-			}
+		}
+		else
+		{
+			CastRay(tree, target);
+		}
+		projectilePosition += speed; //Change projectile position according to current speed
 
+		//If the speed beomes the opposite direction of the ray, we hammer it at zero,
+		//because we don't want backwards movement
+		if (glm::dot(speed, rayDirection) < __EPSILON)
+		{
+			speed = glm::vec3(0, 0, 0);
+		}
+		else
+		{ //else, we update the speed appropriately
+			speed += acceleration * time;
 		}
 	}
 
 	glm::vec3 projectilePosition; //Position of projectile, also ray origin
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
-
+	Triangle affectedTriangle;
 private:
 	bool collision = false;
-	bool isColliding = false;
+	//bool isColliding = false;
 	bool hasProcessed = false;
 	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile

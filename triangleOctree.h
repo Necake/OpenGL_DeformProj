@@ -102,6 +102,12 @@ struct Triangle
 		index1 = i1;
 		index2 = i2;
 	}
+	Triangle()
+	{
+		index0 = -1;
+		index1 = -1;
+		index2 = -1;
+	}
 };
 
 struct OctreeNode
@@ -240,6 +246,11 @@ public:
 			std::cout << "if i got here, you fucked something up??\n";
 			//root = newOctreeNode(data);
 		}
+	}
+
+	OctreeNode* FindFalloffCenterNode(glm::vec3 hitPoint, float falloff)
+	{
+		return FindFalloffCenterNode(hitPoint, root, falloff);
 	}
 
 	void InsertTriangles(std::vector<Triangle> dataArray)
@@ -506,7 +517,7 @@ private:
 					dataArray[i].positions[1] = model.meshes[0].vertices[dataArray[i].index1].Position;
 					dataArray[i].positions[2] = model.meshes[0].vertices[dataArray[i].index2].Position;
 					node->tris->push_back(dataArray[i]);
-					std::cout << "pushed triangle into addr: " << node << "\n";
+					//std::cout << "pushed triangle into addr: " << node << "\n";
 				}
 			}
 		}
@@ -521,6 +532,31 @@ private:
 			InsertTriangles(dataArray, node->XnYnZp);
 			InsertTriangles(dataArray, node->XnYnZn);
 		}
+	}
+
+	OctreeNode* FindFalloffCenterNode(glm::vec3 hitPoint, OctreeNode* node, float falloff)
+	{
+		if ((node->size / 2 < falloff) || (node->XpYpZp == nullptr)) //if it's small enough, or a leaf if the falloff is smaller than the leaves
+		{
+			//recursion exit
+			return node;
+		}
+		else if (vecUtil::isXpYpZp(hitPoint, node->position)) //condition not met, search further
+			FindFalloffCenterNode(hitPoint, node->XpYpZp, falloff);
+		else if (vecUtil::isXpYpZn(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XpYpZn, falloff);
+		else if (vecUtil::isXpYnZp(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XpYnZp, falloff);
+		else if (vecUtil::isXpYnZn(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XpYnZn, falloff);
+		else if (vecUtil::isXnYpZp(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XnYpZp, falloff);
+		else if (vecUtil::isXnYpZn(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XnYpZn, falloff);
+		else if (vecUtil::isXnYnZp(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XnYnZp, falloff);
+		else if (vecUtil::isXnYnZn(hitPoint, node->position))
+			FindFalloffCenterNode(hitPoint, node->XnYnZn, falloff);
 	}
 
 
