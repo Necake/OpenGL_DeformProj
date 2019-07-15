@@ -301,7 +301,7 @@ public:
 
 							collision = true;
 							hitPoint = projectilePosition + hitDistance * glm::normalize(rayDirection);
-							CalcLocalFalloff(tree, target);
+							CalcLocalFalloff(tree, target, targetOctant);
 							return true;
 						}
 					}
@@ -355,11 +355,18 @@ public:
 		RayUtil::renderRay(projectilePosition, rayDirection * 1000000.0f, view, model, projection, rayShader);
 	}
 
-	void CalcLocalFalloff(Octree& tree, OctreeTarget& target)
+	void CalcLocalFalloff(Octree& tree, OctreeTarget& target, OctreeNode* targetOctant)
 	{
 		OctreeNode* falloffCenter = tree.FindFalloffCenterNode(hitPoint, target.falloff);
-		FindAdjacentToData(tree, target, falloffCenter, hitPoint, target.falloff);
-		//AffectFalloff(falloffCenter, target);
+		//FindAdjacentToData(tree, target, falloffCenter, hitPoint, target.falloff);
+		int indexX = tree.calcNodeIndexX(targetOctant);
+		int indexY = tree.calcNodeIndexY(targetOctant);
+		int indexZ = tree.calcNodeIndexZ(targetOctant);
+
+		AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ], target);
+		AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ - 1], target);
+		AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ], target);
+		AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ - 1], target);
 	}
 
 	void AffectFalloff(OctreeNode* node, OctreeTarget& target)

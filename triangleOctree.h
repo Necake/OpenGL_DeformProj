@@ -3,6 +3,7 @@
 
 #include<vector>
 #include<iostream>
+#include<math.h>
 #include<glm\glm.hpp>
 #include<glm\gtc\matrix_transform.hpp>
 #include<glm\gtc\type_ptr.hpp>
@@ -283,6 +284,19 @@ public:
 		DestroyTree(root);
 	}
 
+	inline int calcNodeIndexX(OctreeNode* node)
+	{
+		return roundf((node->position.x + 3.5f * node->size - root->position.x) / node->size);
+	}
+	inline int calcNodeIndexY(OctreeNode * node)
+	{
+		return roundf((node->position.y + 3.5f * node->size - root->position.y) / node->size);
+	}
+	inline int calcNodeIndexZ(OctreeNode * node)
+	{
+		return roundf((node->position.z + 3.5f * node->size - root->position.z) / node->size);
+	}
+
 	OctreeNode* root;
 	Model& model;
 	float minSize; //the most subdivisions allowed
@@ -290,6 +304,7 @@ public:
 	int maxVerts; //the most vertices allowed in an octant
 	int maxTris; //the most tris allowed in an octant
 	int depth; //initial depth
+	OctreeNode* arrayRepresentation[8][8][8];
 private:
 	void DestroyTree(OctreeNode* leaf)
 	{
@@ -351,7 +366,14 @@ private:
 		}
 		else
 		{
-			std::cout << "leef\n";
+			float nodeIndexX = calcNodeIndexX(node);
+			float nodeIndexY = calcNodeIndexY(node);
+			float nodeIndexZ = calcNodeIndexZ(node);
+			int nodeX = roundf(nodeIndexX);
+			int nodeY = roundf(nodeIndexY);
+			int nodeZ = roundf(nodeIndexZ);
+			arrayRepresentation[nodeX][nodeY][nodeZ] = node;
+			std::cout << "leef" <<  nodeX << nodeY << nodeZ <<"\n";
 		}
 
 	}
