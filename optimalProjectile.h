@@ -358,7 +358,8 @@ public:
 	void CalcLocalFalloff(Octree& tree, OctreeTarget& target)
 	{
 		OctreeNode* falloffCenter = tree.FindFalloffCenterNode(hitPoint, target.falloff);
-		AffectFalloff(falloffCenter, target);
+		FindAdjacentToData(tree, target, falloffCenter, hitPoint, target.falloff);
+		//AffectFalloff(falloffCenter, target);
 	}
 
 	void AffectFalloff(OctreeNode* node, OctreeTarget& target)
@@ -401,6 +402,163 @@ public:
 		}
 	}
 
+	void FindAdjacentToData(Octree& tree, OctreeTarget& target, OctreeNode* node, glm::vec3 data, float minSize)
+	{
+		int answer = 0b000000;
+		if (data.x + minSize > node->position.x + node->size / 2) //if we get out 
+			answer |= 0b000001; //need to check x+
+		else if (data.x - minSize < node->position.x - node->size / 2)
+			answer |= 0b001000; //need to check x-
+		if (data.y + minSize > node->position.y + node->size / 2)
+			answer |= 0b000010; //need to check y+
+		else if (data.y - minSize < node->position.y - node->size / 2)
+			answer |= 0b010000; //need to check y-
+		if (data.z + minSize > node->position.z + node->size / 2)
+			answer |= 0b000100; //need to check z+
+		else if (data.z + minSize > node->position.z + node->size / 2)
+			answer |= 0b100000; //need to check z-
+
+		if ((answer & 0b000001) == 0b000001)
+		{
+			//x+
+			glm::vec3 temp = glm::vec3(data.x + minSize, data.y, data.z);
+			AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+			if ((answer & 0b000010) == 0b000010)
+			{
+				//y+
+				temp = glm::vec3(data.x, data.y + minSize, data.z);
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				temp.x += minSize; //x+y+
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				if ((answer & 0b000100) == 0b000100)
+				{
+					//z+
+					temp = glm::vec3(data.x, data.y, data.z + minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize;//x+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y + minSize, data.z + minSize);//y+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize; //x+y+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+				else if ((answer & 0b100000) == 0b100000)
+				{
+					//z-
+					temp = glm::vec3(data.x, data.y, data.z - minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize;//x+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y + minSize, data.z - minSize);//y+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize; //x+y+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+			}
+			else if ((answer & 0b010000) == 0b010000)
+			{
+				//y-
+				glm::vec3 temp = glm::vec3(data.x, data.y - minSize, data.z);
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				temp.x += minSize; //x+y-
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				if ((answer & 0b000100) == 0b000100)
+				{
+					//z+
+					temp = glm::vec3(data.x, data.y, data.z + minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize;//x+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y - minSize, data.z + minSize);//y-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize; //x+y-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+				else if ((answer & 0b100000) == 0b100000)
+				{
+					//z-
+					temp = glm::vec3(data.x, data.y, data.z - minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize;//x+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y - minSize, data.z - minSize);//y-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize; //x+y-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+			}
+		}
+		else if ((answer & 0b001000) == 0b001000)
+		{
+			//x-
+			glm::vec3 temp = glm::vec3(data.x - minSize, data.y, data.z); 
+			AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+			if ((answer & 0b000010) == 0b000010)
+			{
+				//y+
+				temp = glm::vec3(data.x, data.y + minSize, data.z);
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				temp.x -= minSize; //x-y+
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				if ((answer & 0b000100) == 0b000100)
+				{
+					//z+
+					temp = glm::vec3(data.x, data.y, data.z + minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize;//x-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y + minSize, data.z + minSize);//y+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize; //x-y+z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+				else if ((answer & 0b100000) == 0b100000)
+				{
+					//z-
+					temp = glm::vec3(data.x, data.y, data.z - minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize;//x-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y + minSize, data.z - minSize);//y+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize; //x-y+z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+			}
+			else if ((answer & 0b010000) == 0b010000)
+			{
+				//y-
+				glm::vec3 temp = glm::vec3(data.x, data.y - minSize, data.z);
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				temp.x -= minSize; //x-y-
+				AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				if ((answer & 0b000100) == 0b000100)
+				{
+					//z+
+					temp = glm::vec3(data.x, data.y, data.z + minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize;//x-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y - minSize, data.z + minSize);//y-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x -= minSize; //x-y-z+
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+				else if ((answer & 0b100000) == 0b100000)
+				{
+					//z-
+					temp = glm::vec3(data.x, data.y, data.z - minSize);
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize;//x-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp = glm::vec3(data.x, data.y - minSize, data.z - minSize);//y-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+					temp.x += minSize; //x-y-z-
+					AffectFalloff(tree.FindFalloffCenterNode(temp, minSize), target);
+				}
+			}
+		}
+	}
 
 	void Update(Octree& tree, OctreeTarget& target, float time, glm::mat4 model)
 	{

@@ -52,7 +52,7 @@ bool firstMouse = true;
 //TODO: delete dis
 float dentSpeed = 0.01f; bool started = false;
 
-glm::vec3 rayPos = glm::vec3(0.0f, 2.0f, 0.0f);
+glm::vec3 rayPos = glm::vec3(0.01f, 2.0f, 0.01f);
 
 int main()
 {
@@ -370,7 +370,7 @@ int main()
 		octreeTester.RenderRay(view, model, projection);
 		if (started)
 		{
-			octreeTester.Update(sceneOctree, target, deltaTime, model);
+			octreeTester.Update(sceneOctree, target, 0.0167f, model);
 		}
 
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
