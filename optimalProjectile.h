@@ -15,6 +15,7 @@
 #include<string>
 #include<fstream>
 #include<utility>
+#include<set>
 #include "optimalTarget.h"
 #include "shader.h"
 #include "model.h"
@@ -294,9 +295,9 @@ public:
 						{
 							//odmah ovde dentuj da ne bi radio pretragu bezveze
 							acceleration = -rayDirection;
-							affectedTriangle.index0 = (*targetOctant->tris)[i].index0;
-							affectedTriangle.index1 = (*targetOctant->tris)[i].index1;
-							affectedTriangle.index2 = (*targetOctant->tris)[i].index2;
+							affectedVerts.insert((*targetOctant->tris)[i].index0);
+							affectedVerts.insert((*targetOctant->tris)[i].index1);
+							affectedVerts.insert((*targetOctant->tris)[i].index2);
 
 							collision = true;
 							hitPoint = projectilePosition + hitDistance * glm::normalize(rayDirection);
@@ -357,6 +358,7 @@ public:
 	void CalcLocalFalloff(Octree& tree, OctreeTarget& target)
 	{
 		OctreeNode* falloffCenter = tree.FindFalloffCenterNode(hitPoint, target.falloff);
+		AffectFalloff(falloffCenter, target);
 	}
 
 	void AffectFalloff(OctreeNode* node, OctreeTarget& target)
@@ -371,10 +373,18 @@ public:
 				{
 					target.vertInfo[(*node->tris)[i].index0].hitIntensity =
 						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index0].Position - hitPoint));
+					if (target.vertInfo[(*node->tris)[i].index0].hitIntensity > 0.0f)
+						affectedVerts.insert((*node->tris)[i].index0);
+
 					target.vertInfo[(*node->tris)[i].index1].hitIntensity =
 						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index1].Position - hitPoint));
+					if (target.vertInfo[(*node->tris)[i].index1].hitIntensity > 0.0f)
+						affectedVerts.insert((*node->tris)[i].index1);
+
 					target.vertInfo[(*node->tris)[i].index2].hitIntensity =
 						target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index2].Position - hitPoint));
+					if (target.vertInfo[(*node->tris)[i].index2].hitIntensity > 0.0f)
+						affectedVerts.insert((*node->tris)[i].index2);
 				}
 			}
 		}
@@ -396,13 +406,11 @@ public:
 	{
 		if (collision)
 		{
-			tree.model.meshes[0].vertices[affectedTriangle.index0].Position += speed;
-			tree.model.meshes[0].vertices[affectedTriangle.index1].Position += speed;
-			tree.model.meshes[0].vertices[affectedTriangle.index2].Position += speed;
-			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index0);
-			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index1);
-			tree.model.meshes[0].UpdateBufferVertexDirect(affectedTriangle.index2);
-
+			for (auto vert : affectedVerts)
+			{
+				tree.model.meshes[0].vertices[vert].Position += speed * target.vertInfo[vert].hitIntensity;
+				tree.model.meshes[0].UpdateBufferVertexDirect(vert);
+			}
 		}
 		else
 		{
@@ -425,7 +433,7 @@ public:
 	glm::vec3 projectilePosition; //Position of projectile, also ray origin
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
-	Triangle affectedTriangle;
+	std::set<int> affectedVerts;
 private:
 	bool collision = false;
 	//bool isColliding = false;

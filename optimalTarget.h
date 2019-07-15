@@ -41,7 +41,7 @@ public:
 
 		model = glm::mat4(1.0f);
 		std::cout << "Loaded model info, setting up vertices...\n";
-		OptimizeVertices();
+		//OptimizeVertices();
 
 		std::cout << "Successfully set up target\n";
 		float minX, minY, minZ, maxX, maxY, maxZ;
