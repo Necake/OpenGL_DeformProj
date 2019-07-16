@@ -379,6 +379,7 @@ public:
 		   //because we don't want backwards movement
 			if (glm::dot(speed, rayDirection) < __EPSILON)
 			{
+				isDone = true;
 				speed = glm::vec3(0, 0, 0);
 			}
 			else
@@ -392,7 +393,7 @@ public:
 	glm::vec3 projectilePosition; //Position of projectile, also ray origin
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
-	
+	bool isDone = false;
 private:
 	bool collision = false;
 	bool isColliding = false;

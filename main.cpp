@@ -239,8 +239,8 @@ int main()
 	setupStaticLights(objShader, lightPositions, lightDiffuse);
 	setupStaticLights(projShader, lightPositions, lightDiffuse);
 	//Loading the target
-	OctreeTarget target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 3.0f, 3.0f, 1);
-	Octree sceneOctree(target.targetModel, target.boundingBoxSize* 0.5f, 3, 3, 3, target.boundingBoxSize + 0.5f, target.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
+	OctreeTarget target("../../OpenGLAssets/testModels/testPlaneOverkill.obj", 1.0f, 3.0f, 1);
+	Octree sceneOctree(target.targetModel, target.boundingBoxSize* 0.5f, 3, 3, 3, target.boundingBoxSize, target.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
 	target.SetupTree(sceneOctree);
 	objShader.setVec3("material.diffuse", target.targetModel.material.diffuse);
 	objShader.setVec3("material.specular", target.targetModel.material.specular);
@@ -370,7 +370,13 @@ int main()
 		octreeTester.RenderRay(view, model, projection);
 		if (started)
 		{
+			FPSOutput << currentFPS << "\n";
 			octreeTester.Update(sceneOctree, target, 0.0167f, model);
+			if (octreeTester.isDone)
+			{
+				started = false;
+				FPSOutput.close();
+			}
 		}
 
 		glm::mat4 textCanvas = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);

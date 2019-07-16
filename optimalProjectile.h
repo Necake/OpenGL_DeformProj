@@ -362,14 +362,15 @@ public:
 		int indexX = tree.calcNodeIndexX(targetOctant);
 		int indexY = tree.calcNodeIndexY(targetOctant);
 		int indexZ = tree.calcNodeIndexZ(targetOctant);
-
-		AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ], target);
-		AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ - 1], target);
-		AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ], target);
-		AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ - 1], target);
+		//std::cout << indexX << indexY << indexZ << "\n";
+		AffectLeafFalloff(indexX, indexY, indexZ, tree, target);
+		//AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ], target);
+		//AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ - 1], target);
+		//AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ], target);
+		//AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ - 1], target);
 	}
 
-	void AffectFalloff(OctreeNode* node, OctreeTarget& target)
+	void AffectFalloffRecursive(OctreeNode* node, OctreeTarget& target)
 	{
 		//affect all subnodes
 		if (node->XpYpZp == nullptr)
@@ -398,14 +399,65 @@ public:
 		}
 		else
 		{
-			AffectFalloff(node->XpYpZp, target);
-			AffectFalloff(node->XpYpZn, target);
-			AffectFalloff(node->XpYnZp, target);
-			AffectFalloff(node->XpYnZn, target);
-			AffectFalloff(node->XnYpZp, target);
-			AffectFalloff(node->XnYpZn, target);
-			AffectFalloff(node->XnYnZp, target);
-			AffectFalloff(node->XnYnZn, target);
+			AffectFalloffRecursive(node->XpYpZp, target);
+			AffectFalloffRecursive(node->XpYpZn, target);
+			AffectFalloffRecursive(node->XpYnZp, target);
+			AffectFalloffRecursive(node->XpYnZn, target);
+			AffectFalloffRecursive(node->XnYpZp, target);
+			AffectFalloffRecursive(node->XnYpZn, target);
+			AffectFalloffRecursive(node->XnYnZp, target);
+			AffectFalloffRecursive(node->XnYnZn, target);
+		}
+	}
+
+	void AffectFalloff(OctreeNode* node, OctreeTarget& target)
+	{
+		//if there are triangles
+		if (node->tris != nullptr && node->tris->size() > 0)
+		{
+			for (int i = 0; i < node->tris->size(); i++)
+			{
+				target.vertInfo[(*node->tris)[i].index0].hitIntensity =
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index0].Position - hitPoint));
+				if (target.vertInfo[(*node->tris)[i].index0].hitIntensity > 0.0f)
+					affectedVerts.insert((*node->tris)[i].index0);
+
+				target.vertInfo[(*node->tris)[i].index1].hitIntensity =
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index1].Position - hitPoint));
+				if (target.vertInfo[(*node->tris)[i].index1].hitIntensity > 0.0f)
+					affectedVerts.insert((*node->tris)[i].index1);
+
+				target.vertInfo[(*node->tris)[i].index2].hitIntensity =
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index2].Position - hitPoint));
+				if (target.vertInfo[(*node->tris)[i].index2].hitIntensity > 0.0f)
+					affectedVerts.insert((*node->tris)[i].index2);
+			}
+		}
+	}
+
+	void AffectLeafFalloff(int indexX, int indexY, int indexZ, Octree& tree, OctreeTarget& target)
+	{
+		//in a leaf
+		float leafSize = tree.size / 8; //todo change to dynamic
+		int radiusXP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.x - hitPoint.x + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusXN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.x - hitPoint.x - target.falloff) / leafSize));
+		int radiusYP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.y - hitPoint.y + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusYN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.y - hitPoint.y - target.falloff) / leafSize));
+		int radiusZP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.z - hitPoint.z + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusZN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.z - hitPoint.z - target.falloff) / leafSize));
+		radiusXP = min(radiusXP, 7 - indexX); radiusYP = min(radiusYP, 7 - indexY); radiusZP = min(radiusZP, 7 - indexZ);
+		radiusXN = min(radiusXN, indexX); radiusYN = min(radiusYN, indexY); radiusZN = min(radiusXN, indexZ);
+		//std::cout << radiusXP << radiusXN << radiusYP << radiusYN << radiusZP << radiusZN << "\n";
+
+		for (int i = -radiusXN; i <= radiusXP; i++)
+		{
+			for (int j = -radiusYN; j <= radiusYP; j++)
+			{
+				for (int k = -radiusZN; k <= radiusZP; k++)
+				{
+					AffectFalloff(tree.arrayRepresentation[indexX + i][indexY + j][indexZ + k], target);
+				}
+			}
 		}
 	}
 
@@ -588,6 +640,7 @@ public:
 		if (glm::dot(speed, rayDirection) < __EPSILON)
 		{
 			speed = glm::vec3(0, 0, 0);
+			isDone = true;
 		}
 		else
 		{ //else, we update the speed appropriately
@@ -599,6 +652,7 @@ public:
 	glm::vec3 acceleration; //Acceleration of body
 	glm::vec3 rayDirection; //Direction of the actual ray
 	std::set<int> affectedVerts;
+	bool isDone = false;
 private:
 	bool collision = false;
 	//bool isColliding = false;

@@ -6,3 +6,5 @@ vertOutput.txt
 objFrag_full.frag
 objFrag.frag
 fps.csv
+fpsOctree.csv
+fpsBruteForce.csv
