@@ -247,9 +247,9 @@ int main()
 	//Loading the projectile
 	//PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
 	OctreePointProjectile octreeTester(rayPos, glm::vec3(0.0f, -0.03f, 0.0f));
-	OctreeProjectile legitProjectile("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.003f, 0.0f));
-	projShader.setVec3("material.diffuse", legitProjectile.projectileMesh.material.diffuse);
-	projShader.setVec3("material.specular", legitProjectile.projectileMesh.material.specular);
+	OctreeProjectile legitOctreeTester("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.003f, 0.0f));
+	projShader.setVec3("material.diffuse", legitOctreeTester.projectileMesh.material.diffuse);
+	projShader.setVec3("material.specular", legitOctreeTester.projectileMesh.material.specular);
 	//Fps counter constants
 	double lastFPSCheck = glfwGetTime();
 	int currentFPS = 0;
@@ -362,9 +362,9 @@ int main()
 		//projectile.RenderInfiniteRay(view, model, projection);
 		projShader.use();
 		projShader.setMat4("model", model);
-		legitProjectile.model = model;
-		legitProjectile.Draw(projShader);
-		legitProjectile.RenderInfiniteRays(view, projection);
+		legitOctreeTester.model = model;
+		legitOctreeTester.Draw(projShader);
+		legitOctreeTester.RenderInfiniteRays(view, projection);
 
 		//octreeTester.projectilePosition = rayPos;
 		octreeTester.RenderRay(view, model, projection);

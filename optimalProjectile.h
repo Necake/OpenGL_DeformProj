@@ -56,11 +56,45 @@ public:
 		return RayUtil::MTRayCheck(vert0, vert1, vert2, model * glm::vec4(rayOrigin, 1.0f), glm::normalize(-rayDirection), hitDistance);
 	}
 
-	void ProcessRays(OctreeTarget& target, glm::mat4 model)
+	void ProcessRays(Octree& tree, OctreeTarget& target, glm::mat4 model)
 	{
 		//cast rays from projectile onto target
 		for (auto vertexPos : optimizedVerts)
 		{
+			OctreeNode* targetOctant = tree.FindOctant(vertexPos + speed);
+			if (targetOctant != nullptr)
+			{
+				if (targetOctant->tris != nullptr)
+				{
+					if (targetOctant->tris->size() > 0)
+					{
+						for (int i = 0; i < targetOctant->tris->size(); i++)
+						{
+							glm::vec3 vert0 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index0].Position;
+							glm::vec3 vert1 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index1].Position;
+							glm::vec3 vert2 = tree.model.meshes[0].vertices[(*targetOctant->tris)[i].index2].Position;
+							float hitDistance = FLT_MAX;
+							bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(rayDirection), hitDistance);
+							if (rayResult && (hitDistance < glm::length(speed))) // there's gonna be a hit next frame
+							{
+								//odmah ovde dentuj da ne bi radio pretragu bezveze
+								acceleration = -rayDirection;
+								affectedVerts.insert((*targetOctant->tris)[i].index0);
+								affectedVerts.insert((*targetOctant->tris)[i].index1);
+								affectedVerts.insert((*targetOctant->tris)[i].index2);
+
+								collision = true;
+								//float hitPoint = vertexPos + hitDistance * glm::normalize(rayDirection);
+								//CalcLocalFalloff(tree, target, targetOctant);
+								//return true;
+							}
+						}
+						//return false;
+					}
+				}
+			}
+			//return false;
+			/*
 			//for every single vertex in the mesh, cast a ray on every triangle of the target
 			for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
 			{
@@ -76,7 +110,7 @@ public:
 						target.vertInfo[target.targetModel.meshes[0].indices[i]].hitIntensity = 1.0f;
 					}
 				}
-			}
+			}*/
 		}
 		//cast rays from target onto projectile (inverse)
 		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
@@ -250,6 +284,7 @@ private:
 	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
+	std::set<int> affectedVerts;
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };
@@ -312,36 +347,6 @@ public:
 		return false;
 		
 	}
-	//Mesh preprocessing, detects all intersections, bruteforce
-	void ProcessTarget(Target& target, glm::mat4 model)
-	{
-
-		if (collision) //If (at least one) ray has intersected with the target
-		{
-			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++) //for each vertex of the target
-			{
-				std::pair<int, float> newVert;
-				newVert.first = i; //take the index of the vertex, and the amount of fore we apply on it 
-				glm::vec3 distance = (hitPoint - glm::vec3(model * glm::vec4(target.targetModel.meshes[0].vertices[i].Position, 1.0f)));
-				newVert.second = target.falloffFunc(glm::length(distance)); //Calculate the force multiplier
-				//std::cout << "vecLength: " << newVert.second << " x: " << vect.x << " y: " << vect.y << " z: " << vect.z << "\n";
-				if (newVert.second > __EPSILON) //If the vertex is actually affected by the ray in any way, we push it back
-					affectedVertices.push_back(newVert);
-			}
-		}
-	}
-
-	//Dents a single triangle on a given target, and slows down the projectile appropriately
-	void DentTarget(Target & target, float time, glm::mat4 model)
-	{
-		//For each of the affected triangles, get the indices and translade according verts
-		for (int i = 0; i < affectedVertices.size(); i++)
-		{
-			target.targetModel.TranslateVertex(0, affectedVertices[i].first, speed * affectedVertices[i].second);
-			//Update the deformed vertices in the vertex buffer
-			target.targetModel.meshes[0].UpdateBufferVertexDirect(affectedVertices[i].first);
-		}
-	}
 
 	//Renders a ray that has length of acceleration
 	void RenderRay(glm::mat4 view, glm::mat4 model, glm::mat4 projection)
@@ -364,10 +369,6 @@ public:
 		int indexZ = tree.calcNodeIndexZ(targetOctant);
 		//std::cout << indexX << indexY << indexZ << "\n";
 		AffectLeafFalloff(indexX, indexY, indexZ, tree, target);
-		//AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ], target);
-		//AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ - 1], target);
-		//AffectFalloff(tree.arrayRepresentation[indexX - 1][indexY][indexZ], target);
-		//AffectFalloff(tree.arrayRepresentation[indexX][indexY][indexZ - 1], target);
 	}
 
 	void AffectFalloffRecursive(OctreeNode* node, OctreeTarget& target)
@@ -656,12 +657,9 @@ public:
 private:
 	bool collision = false;
 	//bool isColliding = false;
-	bool hasProcessed = false;
 	float hitDistance;
 	glm::vec3 speed; //Current speed of projectile
 	glm::vec3 hitPoint;
-	//Indices of verts affected by rays, along with the % of force acting upon them
-	std::vector<std::pair<int, float>> affectedVertices;
 	Shader rayShader; //Shader of the ray itself
 };
 
