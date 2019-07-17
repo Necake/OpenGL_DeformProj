@@ -131,10 +131,14 @@ public:
 								affectedVerts.insert((*targetOctant->tris)[i].index0);
 								affectedVerts.insert((*targetOctant->tris)[i].index1);
 								affectedVerts.insert((*targetOctant->tris)[i].index2);
+								target.vertInfo[(*targetOctant->tris)[i].index0].hitIntensity = 1.0f;
+								target.vertInfo[(*targetOctant->tris)[i].index1].hitIntensity = 1.0f;
+								target.vertInfo[(*targetOctant->tris)[i].index2].hitIntensity = 1.0f;
 
 								collision = true;
 								glm::vec3 hitPoint = vertexPos + hitDistance * glm::normalize(rayDirection);
-								//CalcLocalFalloff(tree, target, targetOctant);
+
+								CalcLocalFalloff(tree, target, targetOctant, hitPoint);
 								//return true;
 							}
 						}
@@ -174,6 +178,9 @@ public:
 								if (rayResult && hitDistance < glm::length(speed))
 								{
 									affectedVerts.insert(i);
+									target.vertInfo[i].hitIntensity = 1.0f;
+									glm::vec3 hitPoint = vertexPos + hitDistance * glm::normalize(rayDirection);
+									CalcLocalFalloff(tree, target, projectileTree.arrayRepresentation[x][indexY][z], hitPoint);
 								}
 
 							}
@@ -182,57 +189,6 @@ public:
 				}
 				
 			}
-			
-			
-
-			/*
-			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
-			for (int x = 0; x < 8; x++)
-			{
-				for (int y = 0; y < 8; y++)
-				{
-					for (int z = 0; z < 8; z++)
-					{
-						if (projectileTree.arrayRepresentation[x][y][z]->tris != nullptr && projectileTree.arrayRepresentation[x][y][z]->tris->size() > 0)
-						{
-							float hitDistance;
-							for (int j = 0; j < projectileTree.arrayRepresentation[x][y][z]->tris->size(); j++)
-							{
-								glm::vec3 vert0 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index0].Position;
-								glm::vec3 vert1 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index1].Position;
-								glm::vec3 vert2 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index2].Position;
-								bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(-rayDirection), hitDistance);
-								if (rayResult && hitDistance < glm::length(speed))
-								{
-									affectedVerts.insert(i);
-								}
-								//std::cout << "ye ";
-
-							}
-						}
-					}
-				}
-			}*/
-			
-			/*
-			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j += 3)
-			{
-				float hitDistance = 0.0f;
-				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model, hitDistance);
-				if (rayResult && hitDistance < glm::length(speed))
-				{
-					//std::cout << "inverse ray hit!\t"; todo delete
-					affectedVerts.insert(i);
-					if (!target.vertInfo[i].isInitialized)
-					{
-						target.vertInfo[i].isInitialized = true;
-						target.vertInfo[i].hitDistance = hitDistance;
-						target.vertInfo[i].hitIntensity = 1.0f;
-						collision = true;
-					}
-					//std::cout << hitDistance << "\n"; todo delete
-				}
-			}*/
 		}
 	}
 
@@ -263,6 +219,77 @@ public:
 		}
 	}
 
+	void AffectFalloff(OctreeNode * node, OctreeTarget & target, glm::vec3 hitPoint)
+	{
+		//if there are triangles
+		if (node->tris != nullptr && node->tris->size() > 0)
+		{
+			for (int i = 0; i < node->tris->size(); i++)
+			{
+				float hitIntensity = 
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index0].Position - hitPoint));
+				if (hitIntensity > target.vertInfo[(*node->tris)[i].index0].hitIntensity)
+				{
+					target.vertInfo[(*node->tris)[i].index0].hitIntensity = hitIntensity;
+					affectedVerts.insert((*node->tris)[i].index0);
+				}
+
+				hitIntensity =
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index1].Position - hitPoint));
+				if (hitIntensity > target.vertInfo[(*node->tris)[i].index1].hitIntensity)
+				{
+					target.vertInfo[(*node->tris)[i].index1].hitIntensity = hitIntensity;
+					affectedVerts.insert((*node->tris)[i].index1);
+				}
+
+				hitIntensity =
+					target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[(*node->tris)[i].index2].Position - hitPoint));
+				if (hitIntensity > target.vertInfo[(*node->tris)[i].index2].hitIntensity)
+				{
+					target.vertInfo[(*node->tris)[i].index2].hitIntensity = hitIntensity;
+					affectedVerts.insert((*node->tris)[i].index2);
+				}
+			}
+		}
+	}
+
+	void AffectLeafFalloff(int indexX, int indexY, int indexZ, Octree & tree, OctreeTarget & target, glm::vec3 hitPoint)
+	{
+		//in a leaf
+		float leafSize = tree.size / 8; //todo change to dynamic
+		int radiusXP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.x - hitPoint.x + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusXN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.x - hitPoint.x - target.falloff) / leafSize));
+		int radiusYP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.y - hitPoint.y + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusYN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.y - hitPoint.y - target.falloff) / leafSize));
+		int radiusZP = ceil((tree.arrayRepresentation[indexX][indexY][indexZ]->position.z - hitPoint.z + target.falloff) / leafSize); //= target.falloff / (tree.size / 8);
+		int radiusZN = ceil(fabs((tree.arrayRepresentation[indexX][indexY][indexZ]->position.z - hitPoint.z - target.falloff) / leafSize));
+		radiusXP = min(radiusXP, 7 - indexX); radiusYP = min(radiusYP, 7 - indexY); radiusZP = min(radiusZP, 7 - indexZ);
+		radiusXN = min(radiusXN, indexX); radiusYN = min(radiusYN, indexY); radiusZN = min(radiusXN, indexZ);
+		//std::cout << radiusXP << radiusXN << radiusYP << radiusYN << radiusZP << radiusZN << "\n";
+
+		for (int i = -radiusXN; i <= radiusXP; i++)
+		{
+			for (int j = -radiusYN; j <= radiusYP; j++)
+			{
+				for (int k = -radiusZN; k <= radiusZP; k++)
+				{
+					AffectFalloff(tree.arrayRepresentation[indexX + i][indexY + j][indexZ + k], target, hitPoint);
+				}
+			}
+		}
+	}
+
+	void CalcLocalFalloff(Octree& tree, OctreeTarget& target, OctreeNode* targetOctant, glm::vec3 hitPoint)
+	{
+		OctreeNode* falloffCenter = tree.FindFalloffCenterNode(hitPoint, target.falloff);
+		//FindAdjacentToData(tree, target, falloffCenter, hitPoint, target.falloff);
+		int indexX = tree.calcNodeIndexX(targetOctant);
+		int indexY = tree.calcNodeIndexY(targetOctant);
+		int indexZ = tree.calcNodeIndexZ(targetOctant);
+		//std::cout << indexX << indexY << indexZ << "\n";
+		AffectLeafFalloff(indexX, indexY, indexZ, tree, target, hitPoint);
+	}
+
 	void Draw(Shader shader)
 	{
 		shader.use();
@@ -288,7 +315,7 @@ public:
 			//Update distances to impact on vertices
 			for (auto vert : affectedVerts)
 			{
-				tree.model.meshes[0].vertices[vert].Position += speed;// *target.vertInfo[vert].hitIntensity;
+				tree.model.meshes[0].vertices[vert].Position += speed * target.vertInfo[vert].hitIntensity;
 				tree.model.meshes[0].UpdateBufferVertexDirect(vert);
 			}
 
@@ -375,9 +402,6 @@ private:
 	std::vector<std::pair<glm::vec3, float>> hitPoints; //keeps track of hitpoints and their distances from the projectile
 	Shader rayShader;
 };
-
-
-
 
 //----------------------------------------------------------------------------------------
 //Projectile that has only one ray
