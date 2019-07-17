@@ -247,7 +247,10 @@ int main()
 	//Loading the projectile
 	//PointProjectile projectile(glm::vec3(0.0f, 3.05f, -2.20f), glm::vec3(0.0f, -0.03f, 0.005f));
 	OctreePointProjectile octreeTester(rayPos, glm::vec3(0.0f, -0.03f, 0.0f));
-	OctreeProjectile legitOctreeTester("../../OpenGLAssets/testModels/projectileConcave.obj", glm::vec3(0.0f, -0.003f, 0.0f));
+	OctreeProjectile legitOctreeTester("../../OpenGLAssets/testModels/projectileTriangle.obj", glm::vec3(0.0f, -0.03f, 0.0f));
+	Octree projectileOctree(legitOctreeTester.projectileMesh, legitOctreeTester.boundingBoxSize* 0.5f, 3, 3, 3, legitOctreeTester.boundingBoxSize,
+		legitOctreeTester.boundingBoxCenter + glm::vec3(0, 0.001f, 0));
+	legitOctreeTester.SetupTree(projectileOctree);
 	projShader.setVec3("material.diffuse", legitOctreeTester.projectileMesh.material.diffuse);
 	projShader.setVec3("material.specular", legitOctreeTester.projectileMesh.material.specular);
 	//Fps counter constants
@@ -371,8 +374,8 @@ int main()
 		if (started)
 		{
 			FPSOutput << currentFPS << "\n";
-			octreeTester.Update(sceneOctree, target, 0.0167f, model);
-			if (octreeTester.isDone)
+			legitOctreeTester.Update(sceneOctree, projectileOctree, target, 0.0167f, model);
+			if (legitOctreeTester.isDone)
 			{
 				started = false;
 				FPSOutput.close();

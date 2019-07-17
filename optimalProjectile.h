@@ -32,11 +32,60 @@ public:
 		rayDirection = acceleration;
 		speed = acceleration;
 		std::cout << "Successfully constructed projectile ";
+
+		float minX, minY, minZ, maxX, maxY, maxZ;
+		minX = projectileMesh.meshes[0].vertices[0].Position.x; maxX = minX;
+		minY = projectileMesh.meshes[0].vertices[0].Position.y; maxY = minY;
+		minZ = projectileMesh.meshes[0].vertices[0].Position.z; maxZ = minZ;
+		for (int i = 1; i < projectileMesh.meshes[0].vertices.size(); i++)
+		{
+			if (projectileMesh.meshes[0].vertices[i].Position.x <= minX)
+				minX = projectileMesh.meshes[0].vertices[i].Position.x;
+			if (projectileMesh.meshes[0].vertices[i].Position.x >= maxX)
+				maxX = projectileMesh.meshes[0].vertices[i].Position.x;
+
+			if (projectileMesh.meshes[0].vertices[i].Position.y <= minY)
+				minY = projectileMesh.meshes[0].vertices[i].Position.y;
+			if (projectileMesh.meshes[0].vertices[i].Position.y >= maxY)
+				maxY = projectileMesh.meshes[0].vertices[i].Position.y;
+
+			if (projectileMesh.meshes[0].vertices[i].Position.z <= minZ)
+				minZ = projectileMesh.meshes[0].vertices[i].Position.z;
+			if (projectileMesh.meshes[0].vertices[i].Position.z >= maxZ)
+				maxZ = projectileMesh.meshes[0].vertices[i].Position.z;
+
+		}
+		std::cout << "min/max X: " << minX << " " << maxX << "\nmin/max Y: " << minY << " " << maxY <<
+			"\nmin/max Z: " << minZ << " " << maxZ << "\n";
+		boundingBoxSize = fmaxf(fmaxf(maxX - minX, maxY - minY), maxZ - minZ);
+		boundingBoxCenter = glm::vec3((maxX + minX) / 2, (maxY + minY) / 2, (maxZ + minZ) / 2);
+		std::cout << "bounding box size: " << boundingBoxSize << "\n";
+		std::cout << "bounding box center: " << boundingBoxCenter.x << boundingBoxCenter.y << boundingBoxCenter.z << "\n";
+		
+		boundingBoxCenterOffset = boundingBoxCenter;
+		/*
+		for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+		{
+			projectileMesh.meshes[0].vertices[i].Position += glm::vec3(0, 3.0f, 0); //Change position of all vertices
+			projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
+		}*/
+
 		OptimizeVertices();
 		std::cout << "optimized verts size: " << optimizedVerts.size() << "\n";
 
-
 		//std::cout << projectileMesh.meshes[0].vertices.size();//.vertices.size();
+	}
+
+	void SetupTree(Octree& tree)
+	{
+		std::vector<Triangle> modelTris;
+		for (int i = 0; i < projectileMesh.meshes[0].indices.size(); i += 3) //for each triangle, add to octree
+		{
+			modelTris.push_back(Triangle(projectileMesh.meshes[0].indices[i], projectileMesh.meshes[0].indices[i + 1], projectileMesh.meshes[0].indices[i + 2]));
+
+		}
+
+		tree.InsertTriangles(modelTris);
 	}
 
 	//Casts a single ray on a given triangle of a target, given the ray origin (transformed using a model matrix)
@@ -56,11 +105,11 @@ public:
 		return RayUtil::MTRayCheck(vert0, vert1, vert2, model * glm::vec4(rayOrigin, 1.0f), glm::normalize(-rayDirection), hitDistance);
 	}
 
-	void ProcessRays(Octree& tree, OctreeTarget& target, glm::mat4 model)
+	void ProcessRays(Octree& tree, Octree& projectileTree, OctreeTarget& target /*glm::mat4 model*/)
 	{
 		//cast rays from projectile onto target
 		for (auto vertexPos : optimizedVerts)
-		{
+		{ //search for each ray on the projectile model
 			OctreeNode* targetOctant = tree.FindOctant(vertexPos + speed);
 			if (targetOctant != nullptr)
 			{
@@ -84,7 +133,7 @@ public:
 								affectedVerts.insert((*targetOctant->tris)[i].index2);
 
 								collision = true;
-								//float hitPoint = vertexPos + hitDistance * glm::normalize(rayDirection);
+								glm::vec3 hitPoint = vertexPos + hitDistance * glm::normalize(rayDirection);
 								//CalcLocalFalloff(tree, target, targetOctant);
 								//return true;
 							}
@@ -93,35 +142,73 @@ public:
 					}
 				}
 			}
-			//return false;
+			
+		}
+		//cast rays from target onto projectile (inverse)
+		
+		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
+		{
 			/*
-			//for every single vertex in the mesh, cast a ray on every triangle of the target
-			for (int i = 0; i < target.targetModel.meshes[0].indices.size(); i += 3)
+			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
+			OctreeNode* targetOctant = projectileTree.FindOctant(vertexPos -  speed);
+			
+			if (targetOctant != nullptr)
 			{
-				float hitDistance = 0.0f;
-				bool rayResult = CastRay(target, i, i + 1, i + 2, vertexPos, model, hitDistance);
-				if (rayResult)
+				if (targetOctant->tris != nullptr && targetOctant->tris->size() > 0)
 				{
-					collision = true;
-					if (!target.vertInfo[target.targetModel.meshes[0].indices[i]].isInitialized)
+					float hitDistance;
+					for (int j = 0; j < targetOctant->tris->size(); j++)
 					{
-						target.vertInfo[target.targetModel.meshes[0].indices[i]].isInitialized = true;
-						target.vertInfo[target.targetModel.meshes[0].indices[i]].hitDistance = hitDistance;
-						target.vertInfo[target.targetModel.meshes[0].indices[i]].hitIntensity = 1.0f;
+						glm::vec3 vert0 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index0].Position;
+						glm::vec3 vert1 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index1].Position;
+						glm::vec3 vert2 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index2].Position;
+						bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(-rayDirection), hitDistance);
+						if (rayResult && hitDistance < glm::length(speed))
+						{
+							affectedVerts.insert(i);
+						}
+						//std::cout << "ye ";
+
 					}
 				}
 			}*/
-		}
-		//cast rays from target onto projectile (inverse)
-		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
-		{
+			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
+			for (int x = 0; x < 8; x++)
+			{
+				for (int y = 0; y < 8; y++)
+				{
+					for (int z = 0; z < 8; z++)
+					{
+						if (projectileTree.arrayRepresentation[x][y][z]->tris != nullptr && projectileTree.arrayRepresentation[x][y][z]->tris->size() > 0)
+						{
+							float hitDistance;
+							for (int j = 0; j < projectileTree.arrayRepresentation[x][y][z]->tris->size(); j++)
+							{
+								glm::vec3 vert0 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index0].Position;
+								glm::vec3 vert1 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index1].Position;
+								glm::vec3 vert2 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][y][z]->tris)[j].index2].Position;
+								bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(-rayDirection), hitDistance);
+								if (rayResult && hitDistance < glm::length(speed))
+								{
+									affectedVerts.insert(i);
+								}
+								//std::cout << "ye ";
+
+							}
+						}
+					}
+				}
+			}
+			
+			/*
 			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j += 3)
 			{
 				float hitDistance = 0.0f;
 				bool rayResult = CastInverseRay(j, j + 1, j + 2, target.targetModel.meshes[0].vertices[i].Position, model, hitDistance);
-				if (rayResult)
+				if (rayResult && hitDistance < glm::length(speed))
 				{
 					//std::cout << "inverse ray hit!\t"; todo delete
+					affectedVerts.insert(i);
 					if (!target.vertInfo[i].isInitialized)
 					{
 						target.vertInfo[i].isInitialized = true;
@@ -131,7 +218,7 @@ public:
 					}
 					//std::cout << hitDistance << "\n"; todo delete
 				}
-			}
+			}*/
 		}
 	}
 
@@ -180,65 +267,47 @@ public:
 		target.targetModel.meshes[0].UpdateBufferVertexDirect(index);
 	}
 
-	void Update(OctreeTarget& target, float time, glm::mat4 model)
+	void Update(Octree& tree, Octree& projectileTree, OctreeTarget& target, float time, glm::mat4 model)
 	{
 		if (collision)
 		{
-			for (int i = 0; i < optimizedVerts.size(); i++)
-			{
-				optimizedVerts[i] += speed; //Change position of all ray origins according to current speed
-			}
-			for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
-			{
-				projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
-				projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
-			}
-
 			//Update distances to impact on vertices
-			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
+			for (auto vert : affectedVerts)
 			{
-				if (target.vertInfo[i].isInitialized)
-				{
-					target.vertInfo[i].hitDistance -= glm::length(speed);
-					if (target.vertInfo[i].hitDistance < __EPSILON)
-					{
-						//the given vertex is colliding
-						target.vertInfo[i].isColliding = true;
-						acceleration = -rayDirection; //reverse acceleration direction on hit (start slowing down)
-
-						// calculate the falloff around the collided vertex
-						for (int j = 0; j < target.targetModel.meshes[0].vertices.size(); j++)
-						{
-							float falloff = target.falloffFunc(glm::length(target.targetModel.meshes[0].vertices[i].Position - target.targetModel.meshes[0].vertices[j].Position));
-							if (falloff > target.vertInfo[j].hitIntensity)
-							{
-								target.vertInfo[j].hitIntensity = falloff;
-								target.vertInfo[j].isColliding = true;
-							}
-						}
-					}
-				}
-			}
-
-			for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
-			{
-				if (target.vertInfo[i].isColliding)
-					DentVertexDirect(target, i, model);
+				tree.model.meshes[0].vertices[vert].Position += speed;// *target.vertInfo[vert].hitIntensity;
+				tree.model.meshes[0].UpdateBufferVertexDirect(vert);
 			}
 
 			//If the speed beomes the opposite direction of the ray, we hammer it at zero,
 			//because we don't want backwards movement
-			if (glm::dot(speed, rayDirection) < __EPSILON)
-			{
-				speed = glm::vec3(0, 0, 0);
-				isDone = true;
-			}
-			else
-			{ //else, we update the speed appropriately
-				speed += acceleration * time;
-			}
 
 		}
+		boundingBoxCenterOffset += speed;
+		ProcessRays(tree, projectileTree, target);
+
+		for (int i = 0; i < optimizedVerts.size(); i++)
+		{
+			optimizedVerts[i] += speed; //Change position of all ray origins according to current speed
+		}
+		for (int i = 0; i < projectileMesh.meshes[0].vertices.size(); i++)
+		{
+			projectileMesh.meshes[0].vertices[i].Position += speed; //Change position of all vertices according to current speed
+			projectileMesh.meshes[0].UpdateBufferVertexDirect(i);
+		}
+
+
+		projectileTree.UpdatePosition(speed);
+
+		if (glm::dot(speed, rayDirection) < __EPSILON)
+		{
+			speed = glm::vec3(0, 0, 0);
+			isDone = true;
+		}
+		else
+		{ //else, we update the speed appropriately
+			speed += acceleration * time;
+		}
+
 	}
 
 	//Renders a ray that has length of acceleration
@@ -260,6 +329,9 @@ public:
 	glm::vec3 acceleration;
 	glm::vec3 rayDirection;
 	bool isDone = false; //is the sim over?
+
+	float boundingBoxSize;
+	glm::vec3 boundingBoxCenter;
 private:
 	void OptimizeVertices()
 	{
@@ -282,6 +354,7 @@ private:
 	float minHitDistance = FLT_MAX; //equivalent to the min distance of vertex to the body
 	glm::vec3 nearestVert; //the position of the nearest vertex
 	glm::vec3 nearestOrigin; //the position of the origin targeting the nearest vert
+	glm::vec3 boundingBoxCenterOffset;
 	std::vector<glm::vec3> optimizedVerts;
 	std::vector<std::pair<int, float>> affectedVertices;
 	std::set<int> affectedVerts;

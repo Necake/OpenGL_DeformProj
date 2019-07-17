@@ -249,6 +249,11 @@ public:
 		}
 	}
 
+	void UpdatePosition(glm::vec3 offset)
+	{
+		UpdatePosition(root, offset);
+	}
+
 	OctreeNode* FindFalloffCenterNode(glm::vec3 hitPoint, float falloff)
 	{
 		return FindFalloffCenterNode(hitPoint, root, falloff);
@@ -267,7 +272,7 @@ public:
 
 	OctreeNode* FindOctant(glm::vec3 data)
 	{
-		if (fabs(data.x) > size || fabs(data.y) > size || fabs(data.z) > size)
+		if (fabs(data.x) > root->position.x + size || fabs(data.y) > root->position.y + size || fabs(data.z) > root->position.z + size)
 		{
 			//the vector is outside of the tree
 			return nullptr;
@@ -346,6 +351,28 @@ private:
 			glm::vec3(node->position.x - offset, node->position.y - offset, node->position.z + offset));
 		node->XnYnZn = newOctreeNode(newSize,
 			glm::vec3(node->position.x - offset, node->position.y - offset, node->position.z - offset));
+	}
+
+	void UpdatePosition(OctreeNode* node, glm::vec3 offset)
+	{
+		if (node->XpYpZp == nullptr)
+		{
+			node->position += offset;
+			return;
+		}
+		else
+		{
+			node->position += offset;
+			UpdatePosition(node->XpYpZp, offset);
+			UpdatePosition(node->XpYpZn, offset);
+			UpdatePosition(node->XpYnZp, offset);
+			UpdatePosition(node->XpYnZn, offset);
+			UpdatePosition(node->XnYpZp, offset);
+			UpdatePosition(node->XnYpZn, offset);
+			UpdatePosition(node->XnYnZp, offset);
+			UpdatePosition(node->XnYnZn, offset);
+		}
+
 	}
 
 	void InitSubdivide(OctreeNode * node, int depth) //granam svaki cvor do dubine n
