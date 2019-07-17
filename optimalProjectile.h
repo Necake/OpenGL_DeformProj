@@ -148,30 +148,44 @@ public:
 		
 		for (int i = 0; i < target.targetModel.meshes[0].vertices.size(); i++)
 		{
-			/*
-			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
-			OctreeNode* targetOctant = projectileTree.FindOctant(vertexPos -  speed);
 			
-			if (targetOctant != nullptr)
-			{
-				if (targetOctant->tris != nullptr && targetOctant->tris->size() > 0)
-				{
-					float hitDistance;
-					for (int j = 0; j < targetOctant->tris->size(); j++)
-					{
-						glm::vec3 vert0 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index0].Position;
-						glm::vec3 vert1 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index1].Position;
-						glm::vec3 vert2 = projectileTree.model.meshes[0].vertices[(*targetOctant->tris)[j].index2].Position;
-						bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(-rayDirection), hitDistance);
-						if (rayResult && hitDistance < glm::length(speed))
-						{
-							affectedVerts.insert(i);
-						}
-						//std::cout << "ye ";
+			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
+			OctreeNode* targetOctant = projectileTree.FindOctant(vertexPos - speed);
+			int indexX = projectileTree.calcNodeIndexX(targetOctant);
+			int indexY = projectileTree.calcNodeIndexY(targetOctant);
+			int indexZ = projectileTree.calcNodeIndexZ(targetOctant);
 
+
+			for (int x = max(indexX - 3, 0); x < min(indexX + 3, 7); x++)
+			{
+				for (int z = max(indexZ - 3, 0); z < min(indexZ + 3, 7); z++)
+				{
+					if (targetOctant != nullptr)
+					{
+						if (projectileTree.arrayRepresentation[x][indexY][z]->tris != nullptr && projectileTree.arrayRepresentation[x][indexY][z]->tris->size() > 0)
+						{
+							float hitDistance;
+							for (int j = 0; j < projectileTree.arrayRepresentation[x][indexY][z]->tris->size(); j++)
+							{
+								glm::vec3 vert0 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][indexY][z]->tris)[j].index0].Position;
+								glm::vec3 vert1 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][indexY][z]->tris)[j].index1].Position;
+								glm::vec3 vert2 = projectileTree.model.meshes[0].vertices[(*projectileTree.arrayRepresentation[x][indexY][z]->tris)[j].index2].Position;
+								bool rayResult = RayUtil::MTRayCheck(vert0, vert1, vert2, vertexPos, glm::normalize(-rayDirection), hitDistance);
+								if (rayResult && hitDistance < glm::length(speed))
+								{
+									affectedVerts.insert(i);
+								}
+
+							}
+						}
 					}
 				}
-			}*/
+				
+			}
+			
+			
+
+			/*
 			glm::vec3 vertexPos = target.targetModel.meshes[0].vertices[i].Position;
 			for (int x = 0; x < 8; x++)
 			{
@@ -198,7 +212,7 @@ public:
 						}
 					}
 				}
-			}
+			}*/
 			
 			/*
 			for (int j = 0; j < projectileMesh.meshes[0].indices.size(); j += 3)
@@ -282,7 +296,7 @@ public:
 			//because we don't want backwards movement
 
 		}
-		boundingBoxCenterOffset += speed;
+		//boundingBoxCenterOffset += speed;
 		ProcessRays(tree, projectileTree, target);
 
 		for (int i = 0; i < optimizedVerts.size(); i++)
